@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pollution.ai - Multi Account Chat</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f4f9;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* লগ-ইন স্ক্রিন */
+        #loginScreen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #fff;
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 80%;
+            max-width: 350px;
+        }
+        .login-box h2 { color: #28a745; margin-bottom: 5px; } /* Pollution.ai theme */
+        .login-box p { color: #555; margin-bottom: 20px; font-weight: bold; }
+        
+        .login-box input {
+            width: 90%; padding: 12px; margin-bottom: 15px;
+            border: 1px solid #ccc; border-radius: 8px;
+            font-size: 16px; outline: none; text-align: center;
+        }
+        .login-box button {
+            background-color: #0b57d0; color: white; width: 100%;
+            border: none; padding: 12px 24px; border-radius: 8px;
+            font-size: 16px; cursor: pointer; font-weight: bold; margin-bottom: 10px;
+        }
+        .login-box button:hover { background-color: #0842a0; }
+        .back-btn { background-color: #6c757d !important; }
+
+        /* চ্যাট স্ক্রিন */
+        #chatScreen {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            background: #fff;
+            box-shadow: 0 0 15px rgba(0,0,0,0.05);
+        }
+        
+        /* হেডার */
+        .header {
+            padding: 15px 20px;
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h3 { margin: 0; color: #1f1f1f; font-size: 20px; display: flex; align-items: center; gap: 10px; }
+        .account-badge { font-size: 12px; background: #e3e3e3; padding: 3px 8px; border-radius: 10px; color: #555; }
+        
+        .header-buttons { display: flex; gap: 10px; }
+        .clear-btn { background: #fce8e6; color: #d93025; border: none; padding: 8px 15px; border-radius: 15px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .logout-btn { background: #e8f0fe; color: #0b57d0; border: none; padding: 8px 15px; border-radius: 15px; cursor: pointer; font-weight: bold; font-size: 14px; }
+
+        /* চ্যাট এরিয়া */
+        .chat-container {
+            flex: 1; padding: 20px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 20px; background-color: #f0f4f9;
+        }
+
+        .message { max-width: 80%; padding: 12px 18px; border-radius: 20px; font-size: 16px; line-height: 1.5; word-wrap: break-word; }
+        .user-message { background-color: #e3e3e3; color: #1f1f1f; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .ai-message { background-color: #fff; color: #1f1f1f; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        /* ইনপুট এরিয়া */
+        .input-area { padding: 20px; background: #fff; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; justify-content: center; }
+        .input-box { display: flex; width: 100%; max-width: 760px; background: #f0f4f9; border-radius: 30px; padding: 5px 15px; align-items: center; }
+        .input-box input { flex: 1; border: none; background: transparent; padding: 15px; font-size: 16px; outline: none; }
+        .input-box button { background: transparent; border: none; cursor: pointer; color: #0b57d0; font-weight: bold; font-size: 16px; padding: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="loginScreen">
+        <div class="login-box">
+            <h2>Pollution.ai</h2>
+            <p id="sub-title">চালু করতে আপনার নম্বর দিন</p>
+            
+            <div id="step-1">
+                <input type="number" id="phoneNumber" placeholder="Phone Number...">
+                <button onclick="checkNumber()">Next</button>
+            </div>
+
+            <div id="step-2" style="display: none;">
+                <input type="password" id="password" placeholder="Password...">
+                <button id="loginBtn" style="display: none;" onclick="login()">Log In</button>
+                <button id="createBtn" style="display: none;" onclick="createAccount()">Create Account</button>
+                <button class="back-btn" onclick="goBack()">Back</button>
+            </div>
+
+            <div id="message" style="margin-top: 15px; font-weight: bold;"></div>
+        </div>
+    </div>
+
+    <div id="chatScreen">
+        <div class="header">
+            <h3>Pollution AI ✨ <span id="currentUserBadge" class="account-badge"></span></h3>
+            <div class="header-buttons">
+                <button class="clear-btn" onclick="clearMemory()">Clear Memory</button>
+                <button class="logout-btn" onclick="logout()">Log Out</button>
+            </div>
+        </div>
+        
+        <div class="chat-container" id="chatBox">
+            </div>
+
+        <div class="input-area">
+            <div class="input-box">
+                <input type="text" id="prompt" placeholder="এখানে মেসেজ লিখুন..." onkeypress="handleEnter(event)">
+                <button onclick="askAI()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- AUTHENTICATION LOGIC ---
+        // ইউজারের নম্বর ও পাসওয়ার্ড সেভ রাখার ডাটাবেস (ব্রাউজারের স্টোরেজ থেকে নেওয়া)
+        let userDatabase = JSON.parse(localStorage.getItem('app_users_db')) || {};
+        let tempNumber = ""; 
+        let currentUser = "";
+        let conversationHistory = [];
+
+        function checkNumber() {
+            const phone = document.getElementById('phoneNumber').value.trim();
+            if(phone.length === 0) {
+                showMessage("দয়া করে একটি নম্বর দিন!", "red");
+                return;
+            }
+
+            tempNumber = phone;
+            document.getElementById('step-1').style.display = 'none';
+            document.getElementById('step-2').style.display = 'block';
+            showMessage("", ""); // clear message
+
+            // যদি নাম্বার ডাটাবেসে থাকে -> লগ-ইন দেখাবে
+            if (userDatabase[tempNumber]) {
+                document.getElementById('sub-title').innerText = "পাসওয়ার্ড দিন";
+                document.getElementById('loginBtn').style.display = 'block';
+                document.getElementById('createBtn').style.display = 'none';
+            } 
+            // যদি নাম্বার না থাকে -> নতুন পাসওয়ার্ড তৈরি করতে বলবে
+            else {
+                document.getElementById('sub-title').innerText = "নতুন পাসওয়ার্ড তৈরি করুন";
+                document.getElementById('loginBtn').style.display = 'none';
+                document.getElementById('createBtn').style.display = 'block';
+            }
+        }
+
+        function createAccount() {
+            const pass = document.getElementById('password').value;
+            if(pass.trim().length === 0) {
+                showMessage("পাসওয়ার্ড ফাঁকা রাখা যাবে না!", "red");
+                return;
+            }
+
+            // নতুন অ্যাকাউন্ট সেভ করা
+            userDatabase[tempNumber] = pass;
+            localStorage.setItem('app_users_db', JSON.stringify(userDatabase));
+            
+            showMessage("Account Created Successfully! Now you can login.", "green");
+            setTimeout(goBack, 2000); // ২ সেকেন্ড পর আবার লগ-ইন পেজে নিয়ে যাবে
+        }
+
+        function login() {
+            const pass = document.getElementById('password').value;
+            
+            // পাসওয়ার্ড মেলানোর লজিক
+            if (userDatabase[tempNumber] === pass) {
+                currentUser = tempNumber;
+                document.getElementById('currentUserBadge').innerText = "Acc: " + currentUser;
+                
+                // স্ক্রিন পরিবর্তন
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('chatScreen').style.display = 'flex';
+                
+                document.getElementById('chatBox').innerHTML = '';
+                loadMemory(); 
+                
+                // লগ-ইন পেজের ডাটা মুছে রিসেট করে রাখা পরের বারের জন্য
+                goBack();
+                document.getElementById('phoneNumber').value = '';
+                document.getElementById('password').value = '';
+            } else {
+                showMessage("Incorrect Password! Login Failed.", "red");
+            }
+        }
+
+        function goBack() {
+            document.getElementById('step-1').style.display = 'block';
+            document.getElementById('step-2').style.display = 'none';
+            document.getElementById('sub-title').innerText = "চালু করতে আপনার নম্বর দিন";
+            document.getElementById('password').value = "";
+            showMessage("", "");
+        }
+
+        function showMessage(text, color) {
+            const msgObj = document.getElementById("message");
+            msgObj.innerText = text;
+            msgObj.style.color = color;
+        }
+
+        function logout() {
+            currentUser = "";
+            document.getElementById('chatScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'flex';
+        }
+
+        // --- CHAT AI LOGIC ---
+        function handleEnter(event) {
+            if (event.key === 'Enter') askAI();
+        }
+
+        function loadMemory() {
+            const savedChat = localStorage.getItem('ai_memory_' + currentUser);
+            if (savedChat) {
+                conversationHistory = JSON.parse(savedChat);
+                conversationHistory.forEach(msg => {
+                    if(msg.role !== 'system') {
+                        appendMessage(msg.content, msg.role === 'user' ? 'user' : 'ai');
+                    }
+                });
+            } else {
+                conversationHistory = [
+                    { role: 'system', content: 'You are Gemini, a highly intelligent and helpful AI assistant. Answer the user nicely in Bengali.' }
+                ];
+            }
+        }
+
+        function clearMemory() {
+            if(confirm("আপনি কি এই অ্যাকাউন্টের সব স্মৃতি মুছে ফেলতে চান?")) {
+                localStorage.removeItem('ai_memory_' + currentUser);
+                conversationHistory = [
+                    { role: 'system', content: 'You are Gemini. Answer in Bengali.' }
+                ];
+                document.getElementById('chatBox').innerHTML = '';
+            }
+        }
+
+        function appendMessage(text, sender) {
+            const chatBox = document.getElementById('chatBox');
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message');
+            msgDiv.classList.add(sender === 'user' ? 'user-message' : 'ai-message');
+            msgDiv.innerText = text;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function askAI() {
+            const inputField = document.getElementById("prompt");
+            const userText = inputField.value.trim();
+
+            if (!userText) return;
+
+            appendMessage(userText, 'user');
+            inputField.value = '';
+            conversationHistory.push({ role: 'user', content: userText });
+
+            const chatBox = document.getElementById('chatBox');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.classList.add('message', 'ai-message');
+            loadingDiv.innerText = "ভাবছে... ✨";
+            loadingDiv.id = "loadingMsg";
+            chatBox.appendChild(loadingDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch('https://text.pollinations.ai/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messages: conversationHistory,
+                        model: 'openai'
+                    })
+                });
+                
+                if (!response.ok) throw new Error("API Server Error!");
+                
+                const aiResponseText = await response.text();
+                
+                document.getElementById('loadingMsg').remove();
+                appendMessage(aiResponseText, 'ai');
+
+                conversationHistory.push({ role: 'assistant', content: aiResponseText });
+                localStorage.setItem('ai_memory_' + currentUser, JSON.stringify(conversationHistory));
+                
+            } catch (error) {
+                document.getElementById('loadingMsg').remove();
+                appendMessage("Error: " + error.message, 'ai');
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+  </html>
+              
