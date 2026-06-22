@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollution.ai - OTP Cloud Chat</title>
+    <title>Pollution.ai - Email Auth Chat</title>
     <style>
         body, html {
             margin: 0; padding: 0;
@@ -27,15 +27,17 @@
         .login-box input {
             width: 90%; padding: 12px; margin-bottom: 15px;
             border: 1px solid #ccc; border-radius: 8px;
-            font-size: 16px; outline: none; text-align: center;
+            font-size: 16px; outline: none;
         }
         .login-box button {
-            background-color: #0b57d0; color: white; width: 100%;
+            color: white; width: 100%;
             border: none; padding: 12px 24px; border-radius: 8px;
             font-size: 16px; cursor: pointer; font-weight: bold; margin-bottom: 10px;
         }
-        .login-box button:hover { background-color: #0842a0; }
-        .back-btn { background-color: #6c757d !important; }
+        .btn-login { background-color: #0b57d0; }
+        .btn-login:hover { background-color: #0842a0; }
+        .btn-create { background-color: #28a745; }
+        .btn-create:hover { background-color: #218838; }
 
         #chatScreen {
             display: none; flex-direction: column; height: 100vh;
@@ -69,35 +71,25 @@
 </head>
 <body>
 
+    <!-- লগ-ইন স্ক্রিন -->
     <div id="loginScreen">
         <div class="login-box">
             <h2>Pollution.ai</h2>
-            <p id="sub-title">চালু করতে আপনার নম্বর দিন</p>
+            <p id="sub-title">লগ-ইন বা নতুন অ্যাকাউন্ট তৈরি করুন</p>
             
-            <div id="step-1">
-                <input type="text" id="phoneNumber" placeholder="+91 1234567890" required>
-                <button onclick="sendOTP()">Send OTP</button>
-            </div>
-
-            <div id="step-otp" style="display: none;">
-                <input type="number" id="otpCode" placeholder="Enter 6-digit OTP">
-                <button onclick="verifyOTP()">Verify OTP</button>
-                <button class="back-btn" onclick="goBack()">Back</button>
-            </div>
-
-            <div id="step-2" style="display: none;">
-                <input type="password" id="password" placeholder="Password...">
-                <button id="loginBtn" style="display: none;" onclick="login()">Log In</button>
-                <button id="createBtn" style="display: none;" onclick="createAccount()">Create Account</button>
-                <button class="back-btn" onclick="goBack()">Back</button>
+            <div id="auth-form">
+                <input type="email" id="emailInput" placeholder="ইমেইল দিন (ex: abc@gmail.com)" required>
+                <input type="password" id="password" placeholder="পাসওয়ার্ড (অন্তত ৬ অক্ষর)" required>
+                
+                <button class="btn-login" onclick="loginAccount()">Log In</button>
+                <button class="btn-create" onclick="createAccount()">Create Account</button>
             </div>
 
             <div id="message" style="margin-top: 15px; font-weight: bold;"></div>
-            
-            <div id="recaptcha-container"></div>
         </div>
     </div>
 
+    <!-- চ্যাট স্ক্রিন -->
     <div id="chatScreen">
         <div class="header">
             <h3>Pollution AI ✨ <span id="currentUserBadge" class="account-badge"></span></h3>
@@ -118,10 +110,10 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        // Auth Modules
-        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        // Auth Modules for Email/Password
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-        // তোমার দেওয়া নতুন Firebase Config
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyCJwqFqA_9Ebf0XpLQiiY8pV522YNOuUj0",
             authDomain: "chat-fb2b2.firebaseapp.com",
@@ -136,104 +128,62 @@
         const db = getFirestore(app);
         const auth = getAuth(app); 
 
-        let tempNumber = ""; 
-        let currentUser = "";
+        let currentUserEmail = "";
         let conversationHistory = [];
-        let confirmationResult = null; 
 
-        // OTP পাঠানো
-        window.sendOTP = async function() {
-            const phone = document.getElementById('phoneNumber').value.trim();
-            // Firebase-এ SMS পাঠাতে Country code থাকা বাধ্যতামূলক
-            if(phone.length < 10 || !phone.startsWith("+")) {
-                showMessage("Country Code সহ নম্বর দিন (যেমন: +919876543210)", "red");
-                return;
-            }
+        // অ্যাকাউন্ট তৈরি করার ফাংশন
+        window.createAccount = async function() {
+            const email = document.getElementById('emailInput').value.trim();
+            const pass = document.getElementById('password').value;
 
-            tempNumber = phone;
-            showMessage("OTP পাঠানো হচ্ছে...", "blue");
+            if(!email || !pass) return showMessage("ইমেইল ও পাসওয়ার্ড দুটিই দিন!", "red");
+            if(pass.length < 6) return showMessage("পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে!", "red");
 
-            // Recaptcha ভেরিফায়ার তৈরি (বট আটকাতে)
-            if(!window.recaptchaVerifier) {
-                window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-                    'size': 'invisible'
-                });
-            }
+            showMessage("অ্যাকাউন্ট তৈরি হচ্ছে...", "blue");
 
             try {
-                confirmationResult = await signInWithPhoneNumber(auth, tempNumber, window.recaptchaVerifier);
-                document.getElementById('step-1').style.display = 'none';
-                document.getElementById('step-otp').style.display = 'block';
-                document.getElementById('sub-title').innerText = "আপনার মোবাইলে আসা OTP দিন";
-                showMessage("OTP পাঠানো হয়েছে!", "green");
-            } catch (error) {
+                // Firebase Auth-এ অ্যাকাউন্ট তৈরি
+                const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+                
+                // Firestore-এ ইউজারের চ্যাট হিস্ট্রি সেভ করার ডাটাবেস তৈরি
+                await setDoc(doc(db, "users", email), { chatHistory: [] });
+                
+                showMessage("অ্যাকাউন্ট তৈরি সফল! লগ-ইন করা হচ্ছে...", "green");
+                setTimeout(() => window.loginAccount(), 1000); 
+            } catch(error) {
                 console.error(error);
-                showMessage("OTP পাঠাতে সমস্যা হয়েছে। নম্বর চেক করুন।", "red");
+                if(error.code === 'auth/email-already-in-use') {
+                    showMessage("এই ইমেইল দিয়ে আগেই অ্যাকাউন্ট আছে! Log In করুন।", "red");
+                } else {
+                    showMessage("অ্যাকাউন্ট তৈরি করতে সমস্যা হয়েছে।", "red");
+                }
             }
         }
 
-        // OTP ভেরিফাই ও ডাটাবেস চেক
-        window.verifyOTP = async function() {
-            const code = document.getElementById('otpCode').value.trim();
-            if(code.length !== 6) {
-                showMessage("৬ ডিজিটের সঠিক OTP দিন!", "red");
-                return;
-            }
+        // লগ-ইন করার ফাংশন
+        window.loginAccount = async function() {
+            const email = document.getElementById('emailInput').value.trim();
+            const pass = document.getElementById('password').value;
 
-            showMessage("ভেরিফাই করা হচ্ছে...", "blue");
+            if(!email || !pass) return showMessage("ইমেইল ও পাসওয়ার্ড দুটিই দিন!", "red");
+            showMessage("লগ-ইন হচ্ছে...", "blue");
 
             try {
-                await confirmationResult.confirm(code);
-                showMessage("OTP ভেরিফায়েড! ডাটাবেস চেক করা হচ্ছে...", "green");
-
-                // Firestore চেক করা
-                const docRef = doc(db, "users", tempNumber);
+                // Firebase Auth দিয়ে লগ-ইন
+                await signInWithEmailAndPassword(auth, email, pass);
+                
+                currentUserEmail = email;
+                document.getElementById('currentUserBadge').innerText = "Acc: " + currentUserEmail.split('@')[0];
+                
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('chatScreen').style.display = 'flex';
+                document.getElementById('chatBox').innerHTML = '';
+                
+                // Firestore থেকে চ্যাট হিস্ট্রি লোড
+                const docRef = doc(db, "users", email);
                 const docSnap = await getDoc(docRef);
-
-                document.getElementById('step-otp').style.display = 'none';
-                document.getElementById('step-2').style.display = 'block';
-                showMessage("", ""); 
 
                 if (docSnap.exists()) {
-                    document.getElementById('sub-title').innerText = "পাসওয়ার্ড দিন";
-                    document.getElementById('loginBtn').style.display = 'block';
-                    document.getElementById('createBtn').style.display = 'none';
-                } else {
-                    document.getElementById('sub-title').innerText = "নতুন পাসওয়ার্ড তৈরি করুন";
-                    document.getElementById('loginBtn').style.display = 'none';
-                    document.getElementById('createBtn').style.display = 'block';
-                }
-            } catch (error) {
-                console.error(error);
-                showMessage("ভুল OTP!", "red");
-            }
-        }
-
-        window.createAccount = async function() {
-            const pass = document.getElementById('password').value;
-            if(pass.trim().length === 0) return showMessage("পাসওয়ার্ড ফাঁকা রাখা যাবে না!", "red");
-            showMessage("অ্যাকাউন্ট তৈরি হচ্ছে...", "blue");
-            try {
-                await setDoc(doc(db, "users", tempNumber), { password: pass, chatHistory: [] });
-                showMessage("অ্যাকাউন্ট তৈরি সফল! এবার লগ-ইন করুন।", "green");
-                setTimeout(window.goBack, 2000); 
-            } catch(e) { showMessage("অ্যাকাউন্ট তৈরি করতে সমস্যা হয়েছে। Rules চেক করুন।", "red"); }
-        }
-
-        window.login = async function() {
-            const pass = document.getElementById('password').value;
-            showMessage("লগ-ইন হচ্ছে...", "blue");
-            try {
-                const docRef = doc(db, "users", tempNumber);
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists() && docSnap.data().password === pass) {
-                    currentUser = tempNumber;
-                    document.getElementById('currentUserBadge').innerText = "Acc: " + currentUser;
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('chatScreen').style.display = 'flex';
-                    document.getElementById('chatBox').innerHTML = '';
-                    
                     const savedHistory = docSnap.data().chatHistory;
                     if (savedHistory && savedHistory.length > 0) {
                         conversationHistory = savedHistory;
@@ -243,30 +193,29 @@
                     } else {
                         conversationHistory = [{ role: 'system', content: 'You are Gemini. Answer nicely in Bengali.' }];
                     }
-                    window.goBack();
                 } else {
-                    showMessage("ভুল পাসওয়ার্ড! লগ-ইন করা যায়নি।", "red");
+                    // যদি ডাটাবেস না থাকে, নতুন করে বানিয়ে দেবে
+                    await setDoc(docRef, { chatHistory: [] });
+                    conversationHistory = [{ role: 'system', content: 'You are Gemini. Answer nicely in Bengali.' }];
                 }
-            } catch(e) { showMessage("লগ-ইন এরর!", "red"); }
-        }
 
-        window.goBack = function() {
-            document.getElementById('step-1').style.display = 'block';
-            document.getElementById('step-otp').style.display = 'none';
-            document.getElementById('step-2').style.display = 'none';
-            document.getElementById('sub-title').innerText = "চালু করতে আপনার নম্বর দিন";
-            document.getElementById('phoneNumber').value = "";
-            document.getElementById('otpCode').value = "";
-            document.getElementById('password').value = "";
-            showMessage("", "");
-            if(window.recaptchaVerifier) {
-                window.recaptchaVerifier.clear();
-                window.recaptchaVerifier = null;
+                // ইনপুট ফিল্ড ক্লিয়ার করা
+                document.getElementById('emailInput').value = "";
+                document.getElementById('password').value = "";
+                showMessage("", "");
+            } catch(error) {
+                console.error(error);
+                if(error.code === 'auth/invalid-credential') {
+                    showMessage("ভুল ইমেইল বা পাসওয়ার্ড!", "red");
+                } else {
+                    showMessage("লগ-ইন এরর!", "red");
+                }
             }
         }
 
         window.logout = function() {
-            currentUser = "";
+            currentUserEmail = "";
+            auth.signOut();
             document.getElementById('chatScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'flex';
         }
@@ -277,7 +226,7 @@
             if(confirm("আপনি কি এই অ্যাকাউন্টের সব চ্যাট মুছে ফেলতে চান?")) {
                 conversationHistory = [{ role: 'system', content: 'You are Gemini. Answer in Bengali.' }];
                 document.getElementById('chatBox').innerHTML = '';
-                try { await updateDoc(doc(db, "users", currentUser), { chatHistory: conversationHistory }); } 
+                try { await updateDoc(doc(db, "users", currentUserEmail), { chatHistory: conversationHistory }); } 
                 catch(e) {}
             }
         }
@@ -320,7 +269,7 @@
                 appendMessage(aiResponseText, 'ai');
                 conversationHistory.push({ role: 'assistant', content: aiResponseText });
                 
-                await updateDoc(doc(db, "users", currentUser), { chatHistory: conversationHistory });
+                await updateDoc(doc(db, "users", currentUserEmail), { chatHistory: conversationHistory });
             } catch (error) {
                 if(document.getElementById('loadingMsg')) document.getElementById('loadingMsg').remove();
                 appendMessage("Error: AI সাড়া দিচ্ছে না।", 'ai');
@@ -334,5 +283,4 @@
         }
     </script>
 </body>
-    </html>
-    
+</html>
