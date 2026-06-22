@@ -140,16 +140,15 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // তোমার দেওয়া Firebase Config
+        // তোমার দেওয়া নতুন Firebase Config
         const firebaseConfig = {
-            apiKey: "AIzaSyCUqYFyYMHQNT8-CdOfkdh2mMhv4bUNIh4",
-            authDomain: "chatap-2ca07.firebaseapp.com",
-            databaseURL: "https://chatap-2ca07-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "chatap-2ca07",
-            storageBucket: "chatap-2ca07.firebasestorage.app",
-            messagingSenderId: "46577729580",
-            appId: "1:46577729580:web:bb7843488d7cd77c895189",
-            measurementId: "G-FNZVV6MSWP"
+            apiKey: "AIzaSyCJwqFqA_9Ebf0XpLQiiY8pV522YNOuUj0",
+            authDomain: "chat-fb2b2.firebaseapp.com",
+            projectId: "chat-fb2b2",
+            storageBucket: "chat-fb2b2.firebasestorage.app",
+            messagingSenderId: "417720476992",
+            appId: "1:417720476992:web:1ca095d620fa760a9d86a5",
+            measurementId: "G-Q09Q06YVVN"
         };
 
         // Initialize Firebase & Firestore
@@ -161,7 +160,6 @@
         let currentUser = "";
         let conversationHistory = [];
 
-        // UI কন্ট্রোল করার জন্য ফাংশনগুলোকে window অবজেক্টে যোগ করা হয়েছে
         window.checkNumber = async function() {
             const phone = document.getElementById('phoneNumber').value.trim();
             if(phone.length === 0) {
@@ -170,8 +168,6 @@
             }
 
             tempNumber = phone;
-            document.getElementById('step-1').style.display = 'none';
-            document.getElementById('step-2').style.display = 'block';
             showMessage("ডেটাবেস চেক করা হচ্ছে...", "blue");
 
             try {
@@ -180,6 +176,10 @@
                 const docSnap = await getDoc(docRef);
 
                 showMessage("", ""); 
+                
+                // ডেটাবেস কানেক্ট হলে তবেই পেজ বদলাবে
+                document.getElementById('step-1').style.display = 'none';
+                document.getElementById('step-2').style.display = 'block';
 
                 if (docSnap.exists()) {
                     document.getElementById('sub-title').innerText = "পাসওয়ার্ড দিন";
@@ -192,7 +192,7 @@
                 }
             } catch(e) {
                 console.error(e);
-                showMessage("ডাটাবেস কানেকশন এরর!", "red");
+                showMessage("ডাটাবেস কানেকশন এরর! Firestore Rules চেক করুন।", "red");
             }
         }
 
@@ -216,7 +216,7 @@
                 setTimeout(window.goBack, 2000); 
             } catch(e) {
                 console.error(e);
-                showMessage("অ্যাকাউন্ট তৈরি করতে সমস্যা হয়েছে।", "red");
+                showMessage("অ্যাকাউন্ট তৈরি করতে সমস্যা হয়েছে। Rules চেক করুন।", "red");
             }
         }
 
@@ -245,7 +245,6 @@
                             if(msg.role !== 'system') appendMessage(msg.content, msg.role === 'user' ? 'user' : 'ai');
                         });
                     } else {
-                        // নতুন ইউজারের জন্য প্রথম মেসেজ
                         conversationHistory = [{ role: 'system', content: 'You are Gemini. Answer nicely in Bengali.' }];
                     }
 
@@ -292,7 +291,6 @@
             }
         }
 
-        // চ্যাট বক্সে মেসেজ দেখানোর ফাংশন
         function appendMessage(text, sender) {
             const chatBox = document.getElementById('chatBox');
             const msgDiv = document.createElement('div');
@@ -303,7 +301,6 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // AI-এর সাথে কথা বলা এবং ক্লাউডে সেভ করার ফাংশন
         window.askAI = async function() {
             const inputField = document.getElementById("prompt");
             const userText = inputField.value.trim();
@@ -322,7 +319,6 @@
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
-                // AI API Call
                 const response = await fetch('https://text.pollinations.ai/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -336,7 +332,6 @@
 
                 conversationHistory.push({ role: 'assistant', content: aiResponseText });
                 
-                // Firestore ডাটাবেসে চ্যাট আপডেট করা
                 await updateDoc(doc(db, "users", currentUser), {
                     chatHistory: conversationHistory
                 });
@@ -355,5 +350,4 @@
         }
     </script>
 </body>
-    </html>
-            
+</html>
