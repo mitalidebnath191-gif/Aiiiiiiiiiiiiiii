@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollution.ai - Live Shared AI</title>
+    <title>Pollution.ai - Smart Dual AI</title>
     <style>
         body, html {
             margin: 0; padding: 0;
@@ -98,12 +98,11 @@
         <div class="login-box">
             <h2>Pollution.ai</h2>
             <p id="sub-title">লগ-ইন বা নতুন অ্যাকাউন্ট তৈরি করুন</p>
-            
             <div id="auth-form">
                 <input type="email" id="emailInput" placeholder="ইমেইল দিন (ex: abc@gmail.com)" required>
                 <input type="password" id="password" placeholder="পাসওয়ার্ড (অন্তত ৬ অক্ষর)" required>
-                <button class="btn-login" onclick="loginAccount()">Log In / Join Room</button>
-                <button class="btn-create" onclick="createAccount()">Create Account</button>
+                <button class="btn-login" onclick="window.loginAccount()">Log In / Join Room</button>
+                <button class="btn-create" onclick="window.createAccount()">Create Account</button>
             </div>
             <div id="message" style="margin-top: 15px; font-weight: bold;"></div>
         </div>
@@ -113,29 +112,28 @@
         <div class="header">
             <h3>Pollution AI ✨ <span id="currentUserBadge" class="account-badge"></span></h3>
             <div class="header-buttons">
-                <button class="qr-btn" onclick="showQRCode()">📷 QR Share</button>
-                <button class="share-btn" onclick="shareRoom()">🔗 Link Share</button>
-                <button class="clear-btn" onclick="clearMemory()">Clear</button>
-                <button class="logout-btn" onclick="logout()">Log Out</button>
+                <button class="qr-btn" onclick="window.showQRCode()">📷 QR Share</button>
+                <button class="share-btn" onclick="window.shareRoom()">🔗 Link Share</button>
+                <button class="clear-btn" onclick="window.clearMemory()">Clear</button>
+                <button class="logout-btn" onclick="window.logout()">Log Out</button>
             </div>
         </div>
         <div class="chat-container" id="chatBox"></div>
         <div class="input-area">
             <div class="input-box">
-                <button id="micBtn" class="mic-btn" onclick="startVoice()" title="ভয়েস টাইপিং">🎤</button>
-                <input type="text" id="prompt" placeholder="এখানে মেসেজ লিখুন বা মাইকে চাপুন..." onkeypress="handleEnter(event)">
-                <button onclick="askAI()">Send</button>
+                <button id="micBtn" class="mic-btn" onclick="window.startVoice()" title="ভয়েস টাইপিং">🎤</button>
+                <input type="text" id="prompt" placeholder="এখানে মেসেজ লিখুন বা মাইকে চাপুন..." onkeypress="window.handleEnter(event)">
+                <button onclick="window.askAI()">Send</button>
             </div>
         </div>
     </div>
 
-    <!-- QR Code Modal -->
     <div id="qrModal" class="modal">
         <div class="modal-content">
             <h3 style="margin-top:0; color:#1f1f1f;">Share App</h3>
             <p style="font-size: 14px; color: #555;">বন্ধুকে এই কোডটি স্ক্যান করতে বলুন</p>
             <img id="qrImage" src="" alt="QR Code">
-            <button class="close-btn" onclick="closeQRCode()">বন্ধ করুন</button>
+            <button class="close-btn" onclick="window.closeQRCode()">বন্ধ করুন</button>
         </div>
     </div>
 
@@ -172,7 +170,6 @@
             document.getElementById('sub-title').innerText = "বন্ধুর ইনভাইট লিংকে জয়েন করুন";
         }
 
-        // === Auto Login & State Persistence (লিংক বদলালে লগ-আউট হবে না) ===
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUserEmail = user.email;
@@ -184,7 +181,6 @@
             }
         });
 
-        // === Clean URL Generate Helper ===
         function getCleanUrl() {
             let cleanUrl = window.location.origin;
             if(cleanUrl.includes("file://") || cleanUrl === "null") {
@@ -193,14 +189,12 @@
             return cleanUrl;
         }
 
-        // === Message Error Show Function ===
         function showMessage(text, color) {
             const msgObj = document.getElementById("message");
             msgObj.innerText = text;
             msgObj.style.color = color;
         }
 
-        // === Share Room Function (Clean URL) ===
         window.shareRoom = function() {
             let shareUrl = "";
             if (sharedRoomId) {
@@ -230,18 +224,10 @@
             }
         }
 
-        // === QR Code Functions ===
         window.showQRCode = function() {
-            let currentUrl = "";
-            if (sharedRoomId) {
-                currentUrl = window.location.href;
-            } else {
-                currentUrl = getCleanUrl();
-            }
+            let currentUrl = sharedRoomId ? window.location.href : getCleanUrl();
             const encodedUrl = encodeURIComponent(currentUrl);
-            const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedUrl}`;
-            
-            document.getElementById('qrImage').src = qrImageUrl;
+            document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedUrl}`;
             document.getElementById('qrModal').style.display = 'flex';
         }
 
@@ -249,7 +235,6 @@
             document.getElementById('qrModal').style.display = 'none';
         }
 
-        // === Voice Functions ===
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
         if (SpeechRecognition) {
@@ -279,7 +264,6 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // === Account Functions ===
         window.createAccount = async function() {
             const email = document.getElementById('emailInput').value.trim().toLowerCase();
             const pass = document.getElementById('password').value;
@@ -302,19 +286,17 @@
             showMessage("লগ-ইন হচ্ছে...", "blue");
             try {
                 await signInWithEmailAndPassword(auth, email, pass);
-                // onAuthStateChanged নিজে থেকেই বাকি কাজ করে নেবে
                 document.getElementById('emailInput').value = "";
                 document.getElementById('password').value = "";
                 showMessage("", "");
             } catch(error) { showMessage("ভুল ইমেইল বা পাসওয়ার্ড!", "red"); }
         }
 
-        // === Real-time Database Listener ===
         function startChatListener() {
             const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
             const docRef = doc(db, collectionName, docId);
             
-            if(unsubscribe) unsubscribe(); // আগের কোনো লিসেনার থাকলে বন্ধ করবে
+            if(unsubscribe) unsubscribe(); 
             
             unsubscribe = onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists() && docSnap.data().chatHistory) {
@@ -327,7 +309,6 @@
             });
         }
 
-        // === Chat UI & Logic ===
         function renderChats() {
             const chatBox = document.getElementById('chatBox');
             chatBox.innerHTML = '';
@@ -358,9 +339,7 @@
         window.logout = function() {
             if(unsubscribe) unsubscribe(); 
             currentUserEmail = "";
-            auth.signOut().then(() => {
-                window.location.href = getCleanUrl() + "/";
-            });
+            auth.signOut().then(() => { window.location.href = getCleanUrl() + "/"; });
             window.speechSynthesis.cancel();
         }
 
@@ -381,32 +360,78 @@
             if (!userText) return;
 
             inputField.value = '';
+
+            // ==========================================
+            // 📸 QR Code কমান্ড ইন্টারসেপ্টর
+            // ==========================================
+            if (userText.toLowerCase().startsWith("qr ")) {
+                const textToConvert = userText.substring(3).trim(); 
+                if (textToConvert) {
+                    conversationHistory.push({ role: 'user', content: userText, sender: currentUserName });
+                    const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
+                    await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory });
+
+                    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(textToConvert)}`;
+                    const qrMessage = `আপনার দেওয়া টেক্সটের QR Code তৈরি হয়ে গেছে:<br><br><img src="${qrImageUrl}" alt="QR Code" style="border-radius:10px; border: 3px solid #e0e0e0; max-width: 100%;">`;
+
+                    conversationHistory.push({ role: 'assistant', content: qrMessage, sender: "Pollution AI (QR Bot)" });
+                    await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory });
+                    renderChats();
+                    
+                    speakAI("আপনার কিউ আর কোড তৈরি হয়ে গেছে।");
+                    return; 
+                }
+            }
+
             isFetchingAI = true;
 
+            // Save user message
             conversationHistory.push({ role: 'user', content: userText, sender: currentUserName });
             const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
             await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory });
+            renderChats();
+
+            // ==========================================
+            // 🚀 DUAL AI CORE (OpenAI + Mistral)
+            // ==========================================
+            const ai1 = fetch('https://text.pollinations.ai/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: conversationHistory, model: 'openai' })
+            }).then(async res => {
+                let text = await res.text();
+                if (res.status === 429 || text.includes('"error":') || text.includes('Queue full')) throw new Error("AI 1 Busy");
+                return text;
+            });
+
+            const ai2 = fetch('https://text.pollinations.ai/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: conversationHistory, model: 'mistral' })
+            }).then(async res => {
+                let text = await res.text();
+                if (res.status === 429 || text.includes('"error":') || text.includes('Queue full')) throw new Error("AI 2 Busy");
+                return text;
+            });
 
             try {
-                const response = await fetch('https://text.pollinations.ai/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: conversationHistory, model: 'openai' })
-                });
+                // Wait for whichever AI responds fastest
+                const fastestResponse = await Promise.any([ai1, ai2]);
                 
-                const aiResponseText = await response.text();
                 isFetchingAI = false;
-                
-                conversationHistory.push({ role: 'assistant', content: aiResponseText, sender: "Pollution AI" });
+                conversationHistory.push({ role: 'assistant', content: fastestResponse, sender: "Pollution AI" });
                 await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory });
-                speakAI(aiResponseText);
+                speakAI(fastestResponse);
+
             } catch (error) {
+                // Triggered only if BOTH AIs fail
                 isFetchingAI = false;
+                conversationHistory.pop(); 
+                await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory });
                 renderChats();
-                alert("Error: AI সাড়া দিচ্ছে না।");
+                alert("⚠️ দুটি AI সার্ভারই এখন ব্যস্ত! দয়া করে ২-৩ সেকেন্ড পর আবার ট্রাই করো।");
             }
         }
     </script>
 </body>
 </html>
-                    
