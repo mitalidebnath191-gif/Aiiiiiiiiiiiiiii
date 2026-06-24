@@ -171,6 +171,7 @@
                 conversationHistory.push({ role: 'user', content: text });
                 conversationHistory.push({ role: 'assistant', content: `<img src="${qrUrl}" width="100%" style="border-radius:10px;">` });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+                renderChats();
                 return;
             }
 
@@ -180,6 +181,7 @@
                 conversationHistory.push({ role: 'user', content: text });
                 conversationHistory.push({ role: 'assistant', content: `<img src="${imgUrl}" style="max-width:100%; border-radius:10px;">` });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+                renderChats();
                 return;
             }
 
@@ -189,32 +191,40 @@
                 conversationHistory.push({ role: 'user', content: text });
                 conversationHistory.push({ role: 'assistant', content: `<b>আপনার প্রাইভেট রুম রেডি!</b><br><br><a href="${roomLink}" target="_blank" style="color:#0096FF; font-weight:bold;">👉 লিংকে ক্লিক করে জয়েন করুন</a><br><br><i>(এই রুমে AI রিপ্লাই দেবে না, শুধু আপনারা কথা বলতে পারবেন)</i>` });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+                renderChats();
                 return;
             }
 
-            // ৪. 🚀 Standard AI Chat
+            // ৪. 🚀 Standard AI Chat (Smart Fallback Method)
             conversationHistory.push({ role: 'user', content: text });
             try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
             
-            // ⏳ ইউজারের মেসেজ দেখানোর পর 'Thinking' অ্যানিমেশন দেখানো
+            // ⏳ 'Thinking' অ্যানিমেশন
             renderChats(); 
             const chatBox = document.getElementById('chatBox');
             chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7;"><b>Doraemon AI ⚡</b></small><br>ভাবছে... ⏳</div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
-                // ফাস্ট GET রিকোয়েস্ট
-                const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}`);
-                const reply = await res.text();
+                // ট্রিক ১: প্রথমে Mistral মডেলে রিকোয়েস্ট পাঠাবে (এতে ভিড় কম থাকে)
+                let res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}?model=mistral`);
+                let reply = await res.text();
                 
-                // এরর চেকিং
-                if (reply.includes('"error":') || reply.includes('Queue full') || res.status === 429 || reply.trim().startsWith("{")) {
+                // যদি Mistral বিজি থাকে, তবে ট্রিক ২: Llama মডেলে ট্রাই করবে
+                if (res.status === 429 || reply.includes('"error":') || reply.includes('Queue full') || reply.trim().startsWith("{")) {
+                    res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}?model=llama`);
+                    reply = await res.text();
+                }
+                
+                // যদি দুটোই ফেইল করে
+                if (res.status === 429 || reply.includes('"error":') || reply.includes('Queue full') || reply.trim().startsWith("{")) {
                     throw new Error("Server limit");
                 }
 
                 // উত্তর পেলে আসল উত্তর সেভ করা
                 conversationHistory.push({ role: 'assistant', content: reply });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+                renderChats();
                 speakAI(reply);
                 
             } catch (e) {
@@ -224,21 +234,11 @@
                 
                 // রেন্ডার চ্যাট কল করে 'Thinking' মেসেজ সরিয়ে দেওয়া এবং এরর দেখানো
                 renderChats(); 
-                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7;"><b>Doraemon AI ⚠️</b></small><br>উফফ! 😓 সার্ভার এখন একটু ব্যস্ত। দয়া করে ২ সেকেন্ড পর আবার ট্রাই করো।</div>`;
+                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7;"><b>Doraemon AI ⚠️</b></small><br>উফফ! 😓 মেইন সার্ভারগুলো এখন একটু ব্যস্ত। একটু পর আবার ট্রাই করো।</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
         };
-
-        function renderChats() {
-            const chatBox = document.getElementById('chatBox');
-            chatBox.innerHTML = '';
-            conversationHistory.forEach(msg => {
-                const sender = msg.role === 'user' ? 'You' : 'Doraemon AI';
-                chatBox.innerHTML += `<div class="message ${msg.role}-message"><small style="opacity:0.7;"><b>${sender}</b></small><br>${msg.content}</div>`;
-            });
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
+        
         window.clearMemory = async () => {
             if(confirm("সব চ্যাট মুছে ফেলতে চান?")) {
                 const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
