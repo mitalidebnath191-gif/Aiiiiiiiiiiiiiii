@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollution.ai - Doraemon Edition</title>
+    <title>Pollution.ai - Vercel Pro Edition</title>
     <style>
         body, html { margin: 0; padding: 0; font-family: sans-serif; background-color: #111; height: 100%; display: flex; flex-direction: column; }
         
@@ -11,11 +11,11 @@
         .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; width: 80%; max-width: 350px; }
         .btn-login { background-color: #0096FF; color: white; border: none; padding: 12px 20px; border-radius: 8px; width: 100%; cursor: pointer; font-weight: bold; }
         
-        /* 🚀 ডোরেমন ব্যাকগ্রাউন্ড (স্থির ছবি - যা ব্যাটারি সেভারেও ব্লক হবে না) */
+        /* 🚀 Vercel Pro ব্যাকগ্রাউন্ড */
         #chatScreen { 
             display: none; flex-direction: column; height: 100vh; max-width: 800px; margin: 0 auto; width: 100%; 
             background-color: #87CEEB !important; 
-            background-image: url('https://i.pinimg.com/736x/8f/a7/67/8fa7672ec1eb8d24b6d4e8c18731e247.jpg') !important;
+            background-image: url('https://assets.vercel.com/image/upload/v1538361091/repositories/next-js/next-js-bg.png') !important;
             background-size: cover !important;
             background-position: center !important;
         }
@@ -79,7 +79,7 @@
             <br>
             <button onclick="window.closeQRCode()">Close</button>
         </div>
-    </div>
+            </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
@@ -92,6 +92,9 @@
         let currentUserEmail = "";
         let conversationHistory = [];
         let unsubscribe = null; 
+        
+        // 🔒 Smart Lock: ডাবল রিকোয়েস্ট বন্ধ করার জন্য
+        let isFetchingAI = false; 
 
         const urlParams = new URLSearchParams(window.location.search);
         const sharedRoomId = urlParams.get('room');
@@ -158,6 +161,8 @@
 
         // === AI Core & Commands ===
         window.askAI = async () => {
+            if (isFetchingAI) return; // 🔒 যদি আগের মেসেজ প্রসেস হয়, তবে ব্লক করবে
+            
             const input = document.getElementById("prompt");
             const text = input.value.trim();
             if (!text) return;
@@ -171,7 +176,6 @@
                 conversationHistory.push({ role: 'user', content: text });
                 conversationHistory.push({ role: 'assistant', content: `<img src="${qrUrl}" width="100%" style="border-radius:10px;">` });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
-                renderChats();
                 return;
             }
 
@@ -181,7 +185,6 @@
                 conversationHistory.push({ role: 'user', content: text });
                 conversationHistory.push({ role: 'assistant', content: `<img src="${imgUrl}" style="max-width:100%; border-radius:10px;">` });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
-                renderChats();
                 return;
             }
 
@@ -191,40 +194,39 @@
                 conversationHistory.push({ role: 'user', content: text });
                 conversationHistory.push({ role: 'assistant', content: `<b>আপনার প্রাইভেট রুম রেডি!</b><br><br><a href="${roomLink}" target="_blank" style="color:#0096FF; font-weight:bold;">👉 লিংকে ক্লিক করে জয়েন করুন</a><br><br><i>(এই রুমে AI রিপ্লাই দেবে না, শুধু আপনারা কথা বলতে পারবেন)</i>` });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
-                renderChats();
                 return;
             }
 
-            // ৪. 🚀 Standard AI Chat (Smart Fallback Method)
+            // ৪. 🚀 Standard AI Chat
+            isFetchingAI = true; // 🔒 সিস্টেম লক করা হলো
             conversationHistory.push({ role: 'user', content: text });
             try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
             
-            // ⏳ 'Thinking' অ্যানিমেশন
+            // ⏳ ইউজারের মেসেজ দেখানোর পর 'Thinking' অ্যানিমেশন দেখানো
             renderChats(); 
             const chatBox = document.getElementById('chatBox');
             chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7;"><b>Doraemon AI ⚡</b></small><br>ভাবছে... ⏳</div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
-                // ট্রিক ১: প্রথমে Mistral মডেলে রিকোয়েস্ট পাঠাবে (এতে ভিড় কম থাকে)
-                let res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}?model=mistral`);
-                let reply = await res.text();
-                
-                // যদি Mistral বিজি থাকে, তবে ট্রিক ২: Llama মডেলে ট্রাই করবে
-                if (res.status === 429 || reply.includes('"error":') || reply.includes('Queue full') || reply.trim().startsWith("{")) {
-                    res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}?model=llama`);
+                let reply = "";
+                try {
+                    // ট্রিক ১: ডাইরেক্ট এপিআই
+                    const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}?model=mistral`);
                     reply = await res.text();
-                }
-                
-                // যদি দুটোই ফেইল করে
-                if (res.status === 429 || reply.includes('"error":') || reply.includes('Queue full') || reply.trim().startsWith("{")) {
-                    throw new Error("Server limit");
+                    if (res.status === 429 || reply.includes('"error":') || reply.includes('Queue full') || reply.trim().startsWith("{")) throw new Error("limit");
+                } catch(e) {
+                    // ট্রিক ২: Proxy API (IP ব্লক বাইপাস করতে)
+                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent('https://text.pollinations.ai/' + encodeURIComponent(text) + '?model=llama')}`;
+                    const resProxy = await fetch(proxyUrl);
+                    const data = await resProxy.json();
+                    reply = data.contents;
+                    if (!reply || reply.includes('"error":') || reply.includes('Queue full') || reply.trim().startsWith("{")) throw new Error("limit");
                 }
 
                 // উত্তর পেলে আসল উত্তর সেভ করা
                 conversationHistory.push({ role: 'assistant', content: reply });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
-                renderChats();
                 speakAI(reply);
                 
             } catch (e) {
@@ -234,11 +236,23 @@
                 
                 // রেন্ডার চ্যাট কল করে 'Thinking' মেসেজ সরিয়ে দেওয়া এবং এরর দেখানো
                 renderChats(); 
-                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7;"><b>Doraemon AI ⚠️</b></small><br>উফফ! 😓 মেইন সার্ভারগুলো এখন একটু ব্যস্ত। একটু পর আবার ট্রাই করো।</div>`;
+                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7;"><b>Doraemon AI ⚠️</b></small><br>উফফ! 😓 সার্ভার এখন একটু ব্যস্ত। দয়া করে ২ সেকেন্ড পর আবার ট্রাই করো।</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
+            } finally {
+                isFetchingAI = false; // 🔓 উত্তর আসার পর সিস্টেম আনলক করা হলো
             }
         };
-        
+
+        function renderChats() {
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML = '';
+            conversationHistory.forEach(msg => {
+                const sender = msg.role === 'user' ? 'You' : 'Doraemon AI';
+                chatBox.innerHTML += `<div class="message ${msg.role}-message"><small style="opacity:0.7;"><b>${sender}</b></small><br>${msg.content}</div>`;
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
         window.clearMemory = async () => {
             if(confirm("সব চ্যাট মুছে ফেলতে চান?")) {
                 const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
@@ -266,7 +280,10 @@
 
         // Enter press handler
         document.getElementById("prompt").addEventListener("keypress", function(event) {
-            if (event.key === "Enter") window.askAI();
+            if (event.key === "Enter") {
+                event.preventDefault(); // ডাবল সাবমিট বন্ধ করতে
+                window.askAI();
+            }
         });
     </script>
 </body>
