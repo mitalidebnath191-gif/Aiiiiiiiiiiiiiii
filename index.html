@@ -3,259 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollution.ai - Smart Dual AI</title>
+    <title>Pollution.ai - Doraemon Edition</title>
     <style>
-        body, html {
-            margin: 0; padding: 0;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f4f9;
-            height: 100%; display: flex; flex-direction: column;
-        }
-
-        #loginScreen {
-            display: flex; flex-direction: column; justify-content: center;
-            align-items: center; height: 100vh; background: #fff;
-        }
-        .login-box {
-            background: white; padding: 40px; border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center;
-            width: 80%; max-width: 350px;
-        }
-        .login-box h2 { color: #28a745; margin-bottom: 5px; }
-        .login-box p { color: #555; margin-bottom: 20px; font-weight: bold; }
+        body, html { margin: 0; padding: 0; font-family: sans-serif; background-color: #111; height: 100%; display: flex; flex-direction: column; }
         
-        .login-box input {
-            width: 90%; padding: 12px; margin-bottom: 15px;
-            border: 1px solid #ccc; border-radius: 8px;
-            font-size: 16px; outline: none;
-        }
-        .login-box button {
-            color: white; width: 100%;
-            border: none; padding: 12px 24px; border-radius: 8px;
-            font-size: 16px; cursor: pointer; font-weight: bold; margin-bottom: 10px;
-        }
-        .btn-login { background-color: #0b57d0; }
-        .btn-login:hover { background-color: #0842a0; }
-        .btn-create { background-color: #28a745; }
-        .btn-create:hover { background-color: #218838; }
-
-        #chatScreen {
-            display: none; flex-direction: column; height: 100vh;
-            max-width: 800px; margin: 0 auto; width: 100%; background: #fff;
-            box-shadow: 0 0 15px rgba(0,0,0,0.05);
+        #loginScreen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #fff; }
+        .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; width: 80%; max-width: 350px; }
+        .btn-login { background-color: #0096FF; color: white; border: none; padding: 12px 20px; border-radius: 8px; width: 100%; cursor: pointer; font-weight: bold; }
+        
+        /* 🚀 ডোরেমন ব্যাকগ্রাউন্ড (স্থির ছবি - যা ব্যাটারি সেভারেও ব্লক হবে না) */
+        #chatScreen { 
+            display: none; flex-direction: column; height: 100vh; max-width: 800px; margin: 0 auto; width: 100%; 
+            background-color: #87CEEB !important; 
+            background-image: url('https://i.pinimg.com/736x/8f/a7/67/8fa7672ec1eb8d24b6d4e8c18731e247.jpg') !important;
+            background-size: cover !important;
+            background-position: center !important;
         }
         
-        .header {
-            padding: 15px 20px; background: #fff; border-bottom: 1px solid #e0e0e0;
-            display: flex; justify-content: space-between; align-items: center;
-            flex-wrap: wrap; gap: 10px;
-        }
-        .header h3 { margin: 0; color: #1f1f1f; font-size: 20px; display: flex; align-items: center; gap: 10px; }
-        .account-badge { font-size: 12px; background: #e3e3e3; padding: 3px 8px; border-radius: 10px; color: #555; }
+        .header { padding: 15px; background: rgba(0, 150, 255, 0.9); color: white; display: flex; justify-content: space-between; align-items: center; }
+        .header h3 { margin: 0; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); }
+        .header button { background: white; color: #0096FF; padding: 5px 10px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; margin-left: 5px;}
+        .header .clear-btn { color: red; }
         
-        .header-buttons { display: flex; gap: 10px; }
-        .qr-btn { background: #e6f4ea; color: #1e8e3e; border: none; padding: 8px 15px; border-radius: 15px; cursor: pointer; font-weight: bold; font-size: 14px; }
-        .share-btn { background: #e8f0fe; color: #0b57d0; border: none; padding: 8px 15px; border-radius: 15px; cursor: pointer; font-weight: bold; font-size: 14px; }
-        .clear-btn { background: #fce8e6; color: #d93025; border: none; padding: 8px 15px; border-radius: 15px; cursor: pointer; font-weight: bold; font-size: 14px; }
-        .logout-btn { background: #fff; border: 1px solid #ccc; padding: 8px 15px; border-radius: 15px; cursor: pointer; font-weight: bold; font-size: 14px; color: #333; }
-
-        .chat-container {
-            flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; background-color: #f0f4f9;
-        }
-        .message { max-width: 80%; padding: 12px 18px; border-radius: 20px; font-size: 16px; line-height: 1.5; word-wrap: break-word; position: relative; }
-        .user-message { background-color: #e3e3e3; color: #1f1f1f; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .ai-message { background-color: #fff; color: #1f1f1f; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .sender-name { font-size: 11px; font-weight: bold; color: #888; margin-bottom: 5px; display: block; }
-
-        .input-area { padding: 20px; background: #fff; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; justify-content: center; }
-        .input-box { display: flex; width: 100%; max-width: 760px; background: #f0f4f9; border-radius: 30px; padding: 5px 15px; align-items: center; }
-        .input-box input { flex: 1; border: none; background: transparent; padding: 15px; font-size: 16px; outline: none; }
-        .input-box button { background: transparent; border: none; cursor: pointer; color: #0b57d0; font-weight: bold; font-size: 16px; padding: 10px; }
-        .mic-btn { font-size: 22px !important; color: #d93025 !important; transition: transform 0.2s; }
-        .mic-active { transform: scale(1.2); color: #28a745 !important; }
-
-        /* QR Code Modal Styles */
-        .modal {
-            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
-            width: 100%; height: 100%; background-color: rgba(0,0,0,0.6);
-            justify-content: center; align-items: center;
-        }
-        .modal-content {
-            background-color: white; padding: 25px; border-radius: 15px;
-            text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            max-width: 300px; width: 80%;
-        }
-        .modal-content img { width: 200px; height: 200px; margin: 15px 0; border: 5px solid #f0f4f9; border-radius: 10px; }
-        .close-btn {
-            background: #d93025; color: white; border: none; padding: 10px 15px;
-            border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px;
-        }
+        /* চ্যাট কন্টেইনার */
+        .chat-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: rgba(255,255,255,0.3); backdrop-filter: blur(2px); }
+        
+        /* 🔴 Dark Mode ফিক্স: !important দিয়ে রঙ ফিক্স করা হয়েছে */
+        .message { max-width: 85%; padding: 12px 18px; border-radius: 15px; font-size: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .user-message { background-color: #0096FF !important; color: #ffffff !important; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .ai-message { background-color: #ffffff !important; color: #000000 !important; align-self: flex-start; border-bottom-left-radius: 2px; font-weight: bold; }
+        
+        .input-area { padding: 15px; background: rgba(0, 0, 0, 0.7); display: flex; gap: 10px; align-items: center;}
+        
+        /* মাইক বাটন */
+        .mic-btn { background: transparent !important; border: none; font-size: 22px; cursor: pointer; padding: 0; margin-right: 5px; }
+        
+        input { flex: 1; padding: 12px; border-radius: 20px; border: none; outline: none; background: #ffffff !important; color: #000 !important; font-size: 14px; font-weight: bold; }
+        .input-area .send-btn { background: #0096FF; color: white; padding: 10px 20px; border-radius: 20px; border: none; cursor: pointer; font-weight: bold; font-size: 14px;}
+        
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 15px; text-align: center; color: black; }
+        .modal-content button { background: #d93025; color: white; padding: 10px 20px; border: none; border-radius: 10px; margin-top: 15px; cursor: pointer;}
     </style>
 </head>
 <body>
-
     <div id="loginScreen">
         <div class="login-box">
             <h2>Pollution.ai</h2>
-            <p id="sub-title">লগ-ইন বা নতুন অ্যাকাউন্ট তৈরি করুন</p>
-            <div id="auth-form">
-                <input type="email" id="emailInput" placeholder="ইমেইল দিন (ex: abc@gmail.com)" required>
-                <input type="password" id="password" placeholder="পাসওয়ার্ড (অন্তত ৬ অক্ষর)" required>
-                <button class="btn-login" onclick="window.loginAccount()">Log In / Join Room</button>
-                <button class="btn-create" onclick="window.createAccount()">Create Account</button>
-            </div>
-            <div id="message" style="margin-top: 15px; font-weight: bold;"></div>
+            <input type="email" id="emailInput" placeholder="ইমেইল দিন (ex: abc@gmail.com)"><br><br>
+            <input type="password" id="password" placeholder="পাসওয়ার্ড (অন্তত ৬ অক্ষর)"><br><br>
+            <button class="btn-login" onclick="window.loginAccount()">Login / Join</button>
         </div>
     </div>
-
     <div id="chatScreen">
         <div class="header">
-            <h3>Pollution AI ✨ <span id="currentUserBadge" class="account-badge"></span></h3>
-            <div class="header-buttons">
-                <button class="qr-btn" onclick="window.showQRCode()">📷 QR Share</button>
-                <button class="share-btn" onclick="window.shareRoom()">🔗 Link Share</button>
+            <h3>Doraemon AI ⚡</h3>
+            <div>
+                <button onclick="window.showQRCode()">QR</button>
+                <button onclick="window.shareRoom()">Link</button>
                 <button class="clear-btn" onclick="window.clearMemory()">Clear</button>
-                <button class="logout-btn" onclick="window.logout()">Log Out</button>
+                <button onclick="window.logout()">Logout</button>
             </div>
         </div>
         <div class="chat-container" id="chatBox"></div>
         <div class="input-area">
-            <div class="input-box">
-                <button id="micBtn" class="mic-btn" onclick="window.startVoice()" title="ভয়েস টাইপিং">🎤</button>
-                <input type="text" id="prompt" placeholder="এখানে মেসেজ লিখুন বা মাইকে চাপুন..." onkeypress="window.handleEnter(event)">
-                <button onclick="window.askAI()">Send</button>
-            </div>
+            <button class="mic-btn" onclick="window.startVoice()" title="ভয়েস টাইপিং">🎤</button>
+            <input type="text" id="prompt" placeholder="Message or use: qr, img, room ...">
+            <button class="send-btn" onclick="window.askAI()">Send</button>
         </div>
     </div>
-
     <div id="qrModal" class="modal">
         <div class="modal-content">
-            <h3 style="margin-top:0; color:#1f1f1f;">Share App</h3>
-            <p style="font-size: 14px; color: #555;">বন্ধুকে এই কোডটি স্ক্যান করতে বলুন</p>
-            <img id="qrImage" src="" alt="QR Code">
-            <button class="close-btn" onclick="window.closeQRCode()">বন্ধ করুন</button>
+            <h3>Share Room</h3>
+            <img id="qrImage">
+            <br>
+            <button onclick="window.closeQRCode()">Close</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCJwqFqA_9Ebf0XpLQiiY8pV522YNOuUj0",
-            authDomain: "chat-fb2b2.firebaseapp.com",
-            projectId: "chat-fb2b2",
-            storageBucket: "chat-fb2b2.firebasestorage.app",
-            messagingSenderId: "417720476992",
-            appId: "1:417720476992:web:974473397083942d9d86a5",
-            measurementId: "G-V13GZTXQKH"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app); 
+        const app = initializeApp({ apiKey: "AIzaSyCJwqFqA_9Ebf0XpLQiiY8pV522YNOuUj0", authDomain: "chat-fb2b2.firebaseapp.com", projectId: "chat-fb2b2", storageBucket: "chat-fb2b2.firebasestorage.app", messagingSenderId: "417720476992", appId: "1:417720476992:web:974473397083942d9d86a5" });
+        const db = getFirestore(app); const auth = getAuth(app); 
 
         let currentUserEmail = "";
-        let currentUserName = "";
         let conversationHistory = [];
-        let isFetchingAI = false;
         let unsubscribe = null; 
 
         const urlParams = new URLSearchParams(window.location.search);
         const sharedRoomId = urlParams.get('room');
         const collectionName = sharedRoomId ? "shared_rooms" : "users";
 
-        if(sharedRoomId) {
-            document.getElementById('sub-title').innerText = "বন্ধুর ইনভাইট লিংকে জয়েন করুন";
-        }
+        window.loginAccount = async () => {
+            const email = document.getElementById('emailInput').value.trim().toLowerCase();
+            const pass = document.getElementById('password').value;
+            if(!email || !pass) return alert("ইমেইল ও পাসওয়ার্ড দিন!");
+            try { 
+                await signInWithEmailAndPassword(auth, email, pass); 
+            } catch(e) { 
+                try {
+                    await createUserWithEmailAndPassword(auth, email, pass);
+                    alert("নতুন অ্যাকাউন্ট তৈরি হয়েছে!");
+                } catch(err) {
+                    alert("ভুল ইমেইল বা পাসওয়ার্ড!"); 
+                }
+            }
+        };
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUserEmail = user.email;
-                currentUserName = user.email.split('@')[0];
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('chatScreen').style.display = 'flex';
-                document.getElementById('currentUserBadge').innerText = sharedRoomId ? "Group: " + sharedRoomId : "Acc: " + currentUserName;
-                startChatListener();
+                
+                const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
+                if(unsubscribe) unsubscribe();
+                unsubscribe = onSnapshot(doc(db, collectionName, docId), (snap) => {
+                    if(snap.exists()) {
+                        conversationHistory = snap.data().chatHistory || [];
+                        renderChats();
+                    } else {
+                        setDoc(doc(db, collectionName, docId), { chatHistory: [] });
+                    }
+                });
             }
         });
 
-        function getCleanUrl() {
-            let cleanUrl = window.location.origin;
-            if(cleanUrl.includes("file://") || cleanUrl === "null") {
-                cleanUrl = "https://pollution-ai.vercel.app";
-            }
-            return cleanUrl;
-        }
-
-        function showMessage(text, color) {
-            const msgObj = document.getElementById("message");
-            msgObj.innerText = text;
-            msgObj.style.color = color;
-        }
-
-        window.shareRoom = function() {
-            let shareUrl = "";
-            if (sharedRoomId) {
-                shareUrl = window.location.href;
-            } else {
-                const newRoomId = "room_" + Math.random().toString(36).substring(2, 9);
-                shareUrl = getCleanUrl() + "/?room=" + newRoomId;
-            }
-
-            try {
-                const tempInput = document.createElement("input");
-                tempInput.value = shareUrl;
-                document.body.appendChild(tempInput);
-                tempInput.select();
-                document.execCommand("copy");
-                document.body.removeChild(tempInput);
-                
-                if (sharedRoomId) {
-                    alert("এই চ্যাট রুমের লিংক কপি হয়েছে! বন্ধুদের WhatsApp-এ পাঠিয়ে দিন।");
-                } else {
-                    alert("আপনার নিজস্ব শেয়ার লিংক কপি হয়েছে!\nআপনি এখন গ্লোবাল গ্রুপে প্রবেশ করছেন...");
-                    window.location.href = shareUrl; 
-                }
-            } catch (err) {
-                prompt("আপনার ব্রাউজার অটো-কপি ব্লক করেছে। নিচের লিংকটি নিজে কপি করে নিন:", shareUrl);
-                if (!sharedRoomId) window.location.href = shareUrl;
-            }
-        }
-
-        window.showQRCode = function() {
-            let currentUrl = sharedRoomId ? window.location.href : getCleanUrl();
-            const encodedUrl = encodeURIComponent(currentUrl);
-            document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedUrl}`;
-            document.getElementById('qrModal').style.display = 'flex';
-        }
-
-        window.closeQRCode = function() {
-            document.getElementById('qrModal').style.display = 'none';
-        }
-
+        // === Voice Recognition ===
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
             recognition.lang = 'bn-IN';
             recognition.interimResults = false;
-            recognition.onstart = function() {
-                document.getElementById('micBtn').classList.add('mic-active');
-                document.getElementById('prompt').placeholder = "শুনছি... বলুন";
-            };
             recognition.onresult = function(event) {
                 document.getElementById('prompt').value = event.results[0][0].transcript;
                 window.askAI(); 
             };
-            recognition.onerror = function() { document.getElementById('prompt').placeholder = "ভয়েস শোনা যায়নি..."; };
-            recognition.onend = function() {
-                document.getElementById('micBtn').classList.remove('mic-active');
-                document.getElementById('prompt').placeholder = "এখানে মেসেজ লিখুন...";
-            };
         }
-        window.startVoice = function() { if (recognition) recognition.start(); else alert("আপনার ব্রাউজার ভয়েস টাইপিং সাপোর্ট করে না।"); }
+        window.startVoice = function() { 
+            if (recognition) recognition.start(); 
+            else alert("আপনার ব্রাউজার ভয়েস টাইপিং সাপোর্ট করে না।"); 
+        };
         
         function speakAI(text) {
             const cleanText = text.replace(/[\*\#\_]/g, ""); 
@@ -264,174 +156,102 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        window.createAccount = async function() {
-            const email = document.getElementById('emailInput').value.trim().toLowerCase();
-            const pass = document.getElementById('password').value;
-            if(!email || !pass) return showMessage("ইমেইল ও পাসওয়ার্ড দিন!", "red");
-            showMessage("অ্যাকাউন্ট তৈরি হচ্ছে...", "blue");
-            try {
-                await createUserWithEmailAndPassword(auth, email, pass);
-                if(!sharedRoomId) await setDoc(doc(db, "users", email), { chatHistory: [] });
-                showMessage("অ্যাকাউন্ট তৈরি সফল! লগ-ইন করা হচ্ছে...", "green");
-            } catch(error) {
-                if(error.code === 'auth/email-already-in-use') showMessage("এই ইমেইল দিয়ে আগেই অ্যাকাউন্ট আছে!", "red");
-                else showMessage("অ্যাকাউন্ট তৈরি করতে সমস্যা হয়েছে।", "red");
-            }
-        }
+        // === AI Core & Commands ===
+        window.askAI = async () => {
+            const input = document.getElementById("prompt");
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
 
-        window.loginAccount = async function() {
-            const email = document.getElementById('emailInput').value.trim().toLowerCase();
-            const pass = document.getElementById('password').value;
-            if(!email || !pass) return showMessage("ইমেইল ও পাসওয়ার্ড দিন!", "red");
-            showMessage("লগ-ইন হচ্ছে...", "blue");
-            try {
-                await signInWithEmailAndPassword(auth, email, pass);
-                document.getElementById('emailInput').value = "";
-                document.getElementById('password').value = "";
-                showMessage("", "");
-            } catch(error) { showMessage("ভুল ইমেইল বা পাসওয়ার্ড!", "red"); }
-        }
-
-        function startChatListener() {
             const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
-            const docRef = doc(db, collectionName, docId);
-            
-            if(unsubscribe) unsubscribe(); 
-            
-            unsubscribe = onSnapshot(docRef, (docSnap) => {
-                if (docSnap.exists() && docSnap.data().chatHistory) {
-                    conversationHistory = docSnap.data().chatHistory;
-                } else {
-                    setDoc(docRef, { chatHistory: [{ role: 'system', content: 'You are Gemini. Answer nicely in Bengali.' }] });
-                    conversationHistory = [];
-                }
-                renderChats();
-            });
-        }
+
+            // ১. 📸 QR Command
+            if (text.toLowerCase().startsWith("qr ")) {
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(text.substring(3))}&size=200x200`;
+                conversationHistory.push({ role: 'user', content: text });
+                conversationHistory.push({ role: 'assistant', content: `<img src="${qrUrl}" width="100%" style="border-radius:10px;">` });
+                try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+                return;
+            }
+
+            // ২. 🎨 Image Command
+            if (text.toLowerCase().startsWith("img ")) {
+                const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(text.substring(4))}?width=500&height=500&nologo=true`;
+                conversationHistory.push({ role: 'user', content: text });
+                conversationHistory.push({ role: 'assistant', content: `<img src="${imgUrl}" style="max-width:100%; border-radius:10px;">` });
+                try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+                return;
+            }
+
+            // ৩. 🚪 Personal Room Command
+            if (text.toLowerCase().startsWith("room ")) {
+                const roomLink = window.location.origin + "/?room=" + text.substring(5).trim();
+                conversationHistory.push({ role: 'user', content: text });
+                conversationHistory.push({ role: 'assistant', content: `<b>আপনার প্রাইভেট রুম রেডি!</b><br><br><a href="${roomLink}" target="_blank" style="color:#0096FF; font-weight:bold;">👉 লিংকে ক্লিক করে জয়েন করুন</a><br><br><i>(এই রুমে AI রিপ্লাই দেবে না, শুধু আপনারা কথা বলতে পারবেন)</i>` });
+                try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+                return;
+            }
+
+            // ৪. 🚀 Standard AI Chat (Fast GET Method)
+            conversationHistory.push({ role: 'user', content: text });
+            try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+
+            try {
+                const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}`);
+                const reply = await res.text();
+                
+                if (reply.includes('"error":') || reply.includes('Queue full')) throw new Error("Busy");
+
+                conversationHistory.push({ role: 'assistant', content: reply });
+                try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+                speakAI(reply);
+                
+            } catch (e) {
+                conversationHistory.pop();
+                try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(err){}
+                alert("⚠️ সার্ভার এখন একটু ব্যস্ত! দয়া করে ২-৩ সেকেন্ড পর আবার ট্রাই করো।");
+            }
+        };
 
         function renderChats() {
             const chatBox = document.getElementById('chatBox');
             chatBox.innerHTML = '';
             conversationHistory.forEach(msg => {
-                if(msg.role !== 'system') {
-                    const msgDiv = document.createElement('div');
-                    msgDiv.classList.add('message', msg.role === 'user' ? 'user-message' : 'ai-message');
-                    
-                    const senderSpan = document.createElement('span');
-                    senderSpan.classList.add('sender-name');
-                    senderSpan.innerText = msg.sender || (msg.role === 'user' ? 'User' : 'Pollution AI');
-                    
-                    msgDiv.appendChild(senderSpan);
-                    msgDiv.innerHTML += msg.content;
-                    chatBox.appendChild(msgDiv);
-                }
+                const sender = msg.role === 'user' ? 'You' : 'Doraemon AI';
+                chatBox.innerHTML += `<div class="message ${msg.role}-message"><small style="opacity:0.7;"><b>${sender}</b></small><br>${msg.content}</div>`;
             });
-
-            if(isFetchingAI) {
-                const loadingDiv = document.createElement('div');
-                loadingDiv.classList.add('message', 'ai-message');
-                loadingDiv.innerHTML = "<span class='sender-name'>Pollution AI</span>ভাবছে... ✨";
-                chatBox.appendChild(loadingDiv);
-            }
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        window.logout = function() {
-            if(unsubscribe) unsubscribe(); 
-            currentUserEmail = "";
-            auth.signOut().then(() => { window.location.href = getCleanUrl() + "/"; });
-            window.speechSynthesis.cancel();
-        }
-
-        window.handleEnter = function(event) { if (event.key === 'Enter') window.askAI(); }
-
-        window.clearMemory = async function() {
-            if(confirm("আপনি কি এই গ্রুপের সব চ্যাট মুছে ফেলতে চান?")) {
+        window.clearMemory = async () => {
+            if(confirm("সব চ্যাট মুছে ফেলতে চান?")) {
                 const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
-                await updateDoc(doc(db, collectionName, docId), { 
-                    chatHistory: [{ role: 'system', content: 'You are Gemini. Answer in Bengali.' }] 
-                });
+                await updateDoc(doc(db, collectionName, docId), { chatHistory: [] });
             }
-        }
+        };
 
-        window.askAI = async function() {
-            const inputField = document.getElementById("prompt");
-            const userText = inputField.value.trim();
-            if (!userText) return;
+        window.showQRCode = () => { 
+            let currentUrl = window.location.href;
+            if(currentUrl.includes("file://") || currentUrl === "null") currentUrl = "https://pollution-ai.vercel.app";
+            document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(currentUrl)}&size=200x200`; 
+            document.getElementById('qrModal').style.display = 'flex'; 
+        };
+        
+        window.closeQRCode = () => document.getElementById('qrModal').style.display = 'none';
+        
+        window.shareRoom = () => { 
+            let currentUrl = window.location.href;
+            if(currentUrl.includes("file://") || currentUrl === "null") currentUrl = "https://pollution-ai.vercel.app";
+            navigator.clipboard.writeText(currentUrl); 
+            alert("লিংক কপি হয়েছে!"); 
+        };
+        
+        window.logout = () => { auth.signOut(); location.reload(); };
 
-            inputField.value = '';
-
-            // ==========================================
-            // 📸 QR Code কমান্ড ইন্টারসেপ্টর
-            // ==========================================
-            if (userText.toLowerCase().startsWith("qr ")) {
-                const textToConvert = userText.substring(3).trim(); 
-                if (textToConvert) {
-                    conversationHistory.push({ role: 'user', content: userText, sender: currentUserName });
-                    const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
-                    await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory });
-
-                    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(textToConvert)}`;
-                    const qrMessage = `আপনার দেওয়া টেক্সটের QR Code তৈরি হয়ে গেছে:<br><br><img src="${qrImageUrl}" alt="QR Code" style="border-radius:10px; border: 3px solid #e0e0e0; max-width: 100%;">`;
-
-                    conversationHistory.push({ role: 'assistant', content: qrMessage, sender: "Pollution AI (QR Bot)" });
-                    await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory });
-                    renderChats();
-                    
-                    speakAI("আপনার কিউ আর কোড তৈরি হয়ে গেছে।");
-                    return; 
-                }
-            }
-
-            isFetchingAI = true;
-
-            // Save user message
-            conversationHistory.push({ role: 'user', content: userText, sender: currentUserName });
-            const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
-            await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory });
-            renderChats();
-
-            // ==========================================
-            // 🚀 DUAL AI CORE (OpenAI + Mistral)
-            // ==========================================
-            const ai1 = fetch('https://text.pollinations.ai/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: conversationHistory, model: 'openai' })
-            }).then(async res => {
-                let text = await res.text();
-                if (res.status === 429 || text.includes('"error":') || text.includes('Queue full')) throw new Error("AI 1 Busy");
-                return text;
-            });
-
-            const ai2 = fetch('https://text.pollinations.ai/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: conversationHistory, model: 'mistral' })
-            }).then(async res => {
-                let text = await res.text();
-                if (res.status === 429 || text.includes('"error":') || text.includes('Queue full')) throw new Error("AI 2 Busy");
-                return text;
-            });
-
-            try {
-                // Wait for whichever AI responds fastest
-                const fastestResponse = await Promise.any([ai1, ai2]);
-                
-                isFetchingAI = false;
-                conversationHistory.push({ role: 'assistant', content: fastestResponse, sender: "Pollution AI" });
-                await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory });
-                speakAI(fastestResponse);
-
-            } catch (error) {
-                // Triggered only if BOTH AIs fail
-                isFetchingAI = false;
-                conversationHistory.pop(); 
-                await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory });
-                renderChats();
-                alert("⚠️ দুটি AI সার্ভারই এখন ব্যস্ত! দয়া করে ২-৩ সেকেন্ড পর আবার ট্রাই করো।");
-            }
-        }
+        // Enter press handler
+        document.getElementById("prompt").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") window.askAI();
+        });
     </script>
 </body>
 </html>
