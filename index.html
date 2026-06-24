@@ -192,24 +192,40 @@
                 return;
             }
 
-            // ৪. 🚀 Standard AI Chat (Fast GET Method)
+            // ৪. 🚀 Standard AI Chat
             conversationHistory.push({ role: 'user', content: text });
             try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+            
+            // ⏳ ইউজারের মেসেজ দেখানোর পর 'Thinking' অ্যানিমেশন দেখানো
+            renderChats(); 
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7;"><b>Doraemon AI ⚡</b></small><br>ভাবছে... ⏳</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
+                // ফাস্ট GET রিকোয়েস্ট
                 const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}`);
                 const reply = await res.text();
                 
-                if (reply.includes('"error":') || reply.includes('Queue full')) throw new Error("Busy");
+                // এরর চেকিং
+                if (reply.includes('"error":') || reply.includes('Queue full') || res.status === 429 || reply.trim().startsWith("{")) {
+                    throw new Error("Server limit");
+                }
 
+                // উত্তর পেলে আসল উত্তর সেভ করা
                 conversationHistory.push({ role: 'assistant', content: reply });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
                 speakAI(reply);
                 
             } catch (e) {
+                // সার্ভার ফেইল করলে মেসেজ ডিলিট করে ওয়ার্নিং দেখানো
                 conversationHistory.pop();
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(err){}
-                alert("⚠️ সার্ভার এখন একটু ব্যস্ত! দয়া করে ২-৩ সেকেন্ড পর আবার ট্রাই করো।");
+                
+                // রেন্ডার চ্যাট কল করে 'Thinking' মেসেজ সরিয়ে দেওয়া এবং এরর দেখানো
+                renderChats(); 
+                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7;"><b>Doraemon AI ⚠️</b></small><br>উফফ! 😓 সার্ভার এখন একটু ব্যস্ত। দয়া করে ২ সেকেন্ড পর আবার ট্রাই করো।</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
             }
         };
 
