@@ -28,7 +28,6 @@
         /* চ্যাট কন্টেইনার */
         .chat-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: rgba(255,255,255,0.3); backdrop-filter: blur(2px); }
         
-        /* 🔴 Dark Mode ফিক্স: !important দিয়ে রঙ ফিক্স করা হয়েছে */
         .message { max-width: 85%; padding: 12px 18px; border-radius: 15px; font-size: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .user-message { background-color: #0096FF !important; color: #ffffff !important; align-self: flex-end; border-bottom-right-radius: 2px; }
         .ai-message { background-color: #ffffff !important; color: #000000 !important; align-self: flex-start; border-bottom-left-radius: 2px; font-weight: bold; }
@@ -79,7 +78,7 @@
             <br>
             <button onclick="window.closeQRCode()">Close</button>
         </div>
-            </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
@@ -92,8 +91,6 @@
         let currentUserEmail = "";
         let conversationHistory = [];
         let unsubscribe = null; 
-        
-        // 🔒 Smart Lock: ডাবল রিকোয়েস্ট বন্ধ করার জন্য
         let isFetchingAI = false; 
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -135,7 +132,6 @@
             }
         });
 
-        // === Voice Recognition ===
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
         if (SpeechRecognition) {
@@ -159,9 +155,9 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // === AI Core & Commands ===
+        // === AI Core (3-Layer VIP Bypass) ===
         window.askAI = async () => {
-            if (isFetchingAI) return; // 🔒 যদি আগের মেসেজ প্রসেস হয়, তবে ব্লক করবে
+            if (isFetchingAI) return; 
             
             const input = document.getElementById("prompt");
             const text = input.value.trim();
@@ -192,17 +188,16 @@
             if (text.toLowerCase().startsWith("room ")) {
                 const roomLink = window.location.origin + "/?room=" + text.substring(5).trim();
                 conversationHistory.push({ role: 'user', content: text });
-                conversationHistory.push({ role: 'assistant', content: `<b>আপনার প্রাইভেট রুম রেডি!</b><br><br><a href="${roomLink}" target="_blank" style="color:#0096FF; font-weight:bold;">👉 লিংকে ক্লিক করে জয়েন করুন</a><br><br><i>(এই রুমে AI রিপ্লাই দেবে না, শুধু আপনারা কথা বলতে পারবেন)</i>` });
+                conversationHistory.push({ role: 'assistant', content: `<b>আপনার প্রাইভেট রুম রেডি!</b><br><br><a href="${roomLink}" target="_blank" style="color:#0096FF; font-weight:bold;">👉 লিংকে ক্লিক করে জয়েন করুন</a>` });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
                 return;
             }
 
-            // ৪. 🚀 Standard AI Chat
-            isFetchingAI = true; // 🔒 সিস্টেম লক করা হলো
+            // ৪. 🚀 Standard AI Chat (Bypass Mode)
+            isFetchingAI = true; 
             conversationHistory.push({ role: 'user', content: text });
             try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
             
-            // ⏳ ইউজারের মেসেজ দেখানোর পর 'Thinking' অ্যানিমেশন দেখানো
             renderChats(); 
             const chatBox = document.getElementById('chatBox');
             chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7;"><b>Doraemon AI ⚡</b></small><br>ভাবছে... ⏳</div>`;
@@ -210,36 +205,47 @@
 
             try {
                 let reply = "";
-                try {
-                    // ট্রিক ১: ডাইরেক্ট এপিআই
-                    const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}?model=mistral`);
-                    reply = await res.text();
-                    if (res.status === 429 || reply.includes('"error":') || reply.includes('Queue full') || reply.trim().startsWith("{")) throw new Error("limit");
-                } catch(e) {
-                    // ট্রিক ২: Proxy API (IP ব্লক বাইপাস করতে)
-                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent('https://text.pollinations.ai/' + encodeURIComponent(text) + '?model=llama')}`;
-                    const resProxy = await fetch(proxyUrl);
-                    const data = await resProxy.json();
-                    reply = data.contents;
-                    if (!reply || reply.includes('"error":') || reply.includes('Queue full') || reply.trim().startsWith("{")) throw new Error("limit");
+                let success = false;
+                const encodedText = encodeURIComponent(text);
+
+                // 🛡️ 3-Layer Proxy System (তোমার IP হাইড করার জন্য)
+                const apiList = [
+                    `https://text.pollinations.ai/${encodedText}`, // Direct
+                    `https://api.allorigins.win/raw?url=${encodeURIComponent('https://text.pollinations.ai/' + encodedText + '?model=mistral')}`, // Proxy 1
+                    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://text.pollinations.ai/' + encodedText + '?model=llama')}`  // Proxy 2
+                ];
+
+                for (let url of apiList) {
+                    try {
+                        const res = await fetch(url);
+                        const data = await res.text();
+                        // যদি ডাটা সঠিক হয় এবং কোনো এরর কোড না থাকে
+                        if (res.status === 200 && !data.includes('"error":') && !data.includes('Queue full') && !data.trim().startsWith("{")) {
+                            reply = data;
+                            success = true;
+                            break; // উত্তর পেয়ে গেলে লুপ ভেঙে বেরিয়ে আসবে
+                        }
+                    } catch (err) {
+                        console.log("Bypassing server block...");
+                    }
                 }
 
-                // উত্তর পেলে আসল উত্তর সেভ করা
+                if (!success) throw new Error("All blocked");
+
                 conversationHistory.push({ role: 'assistant', content: reply });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+                renderChats();
                 speakAI(reply);
                 
             } catch (e) {
-                // সার্ভার ফেইল করলে মেসেজ ডিলিট করে ওয়ার্নিং দেখানো
                 conversationHistory.pop();
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(err){}
                 
-                // রেন্ডার চ্যাট কল করে 'Thinking' মেসেজ সরিয়ে দেওয়া এবং এরর দেখানো
                 renderChats(); 
-                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7;"><b>Doraemon AI ⚠️</b></small><br>উফফ! 😓 সার্ভার এখন একটু ব্যস্ত। দয়া করে ২ সেকেন্ড পর আবার ট্রাই করো।</div>`;
+                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7;"><b>Doraemon AI ⚠️</b></small><br>উফফ! 😓 তোমার আইপি থেকে অনেক রিকোয়েস্ট গেছে। একটু পর ট্রাই করো!</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             } finally {
-                isFetchingAI = false; // 🔓 উত্তর আসার পর সিস্টেম আনলক করা হলো
+                isFetchingAI = false; 
             }
         };
 
@@ -278,10 +284,9 @@
         
         window.logout = () => { auth.signOut(); location.reload(); };
 
-        // Enter press handler
         document.getElementById("prompt").addEventListener("keypress", function(event) {
             if (event.key === "Enter") {
-                event.preventDefault(); // ডাবল সাবমিট বন্ধ করতে
+                event.preventDefault(); 
                 window.askAI();
             }
         });
