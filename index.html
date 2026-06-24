@@ -155,7 +155,7 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // === AI Core (3-Layer VIP Bypass) ===
+        // === AI Core (New Powerful Hercai API) ===
         window.askAI = async () => {
             if (isFetchingAI) return; 
             
@@ -193,7 +193,7 @@
                 return;
             }
 
-            // ৪. 🚀 Standard AI Chat (Bypass Mode)
+            // ৪. 🚀 Standard AI Chat
             isFetchingAI = true; 
             conversationHistory.push({ role: 'user', content: text });
             try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
@@ -206,31 +206,30 @@
             try {
                 let reply = "";
                 let success = false;
-                const encodedText = encodeURIComponent(text);
 
-                // 🛡️ 3-Layer Proxy System (তোমার IP হাইড করার জন্য)
-                const apiList = [
-                    `https://text.pollinations.ai/${encodedText}`, // Direct
-                    `https://api.allorigins.win/raw?url=${encodeURIComponent('https://text.pollinations.ai/' + encodedText + '?model=mistral')}`, // Proxy 1
-                    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://text.pollinations.ai/' + encodedText + '?model=llama')}`  // Proxy 2
-                ];
+                // 🛡️ নতুন শক্তিশালী সার্ভার: Hercai AI
+                try {
+                    const res = await fetch(`https://hercai.onrender.com/v3/hercai?question=${encodeURIComponent(text)}`);
+                    const data = await res.json();
+                    if (data && data.reply && !data.reply.includes("error")) {
+                        reply = data.reply;
+                        success = true;
+                    }
+                } catch (err) {
+                    console.log("Hercai busy, trying backup...");
+                }
 
-                for (let url of apiList) {
-                    try {
-                        const res = await fetch(url);
-                        const data = await res.text();
-                        // যদি ডাটা সঠিক হয় এবং কোনো এরর কোড না থাকে
-                        if (res.status === 200 && !data.includes('"error":') && !data.includes('Queue full') && !data.trim().startsWith("{")) {
-                            reply = data;
-                            success = true;
-                            break; // উত্তর পেয়ে গেলে লুপ ভেঙে বেরিয়ে আসবে
-                        }
-                    } catch (err) {
-                        console.log("Bypassing server block...");
+                // 🛡️ ব্যাকআপ সার্ভার: Pollinations (যদি Hercai ফেইল করে)
+                if (!success) {
+                    const res2 = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}?model=llama`);
+                    const data2 = await res2.text();
+                    if (res2.status === 200 && !data2.includes('"error":') && !data2.includes('Queue full') && !data2.trim().startsWith("{")) {
+                        reply = data2;
+                        success = true;
                     }
                 }
 
-                if (!success) throw new Error("All blocked");
+                if (!success) throw new Error("All servers blocked");
 
                 conversationHistory.push({ role: 'assistant', content: reply });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
@@ -242,7 +241,7 @@
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(err){}
                 
                 renderChats(); 
-                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7;"><b>Doraemon AI ⚠️</b></small><br>উফফ! 😓 তোমার আইপি থেকে অনেক রিকোয়েস্ট গেছে। একটু পর ট্রাই করো!</div>`;
+                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7;"><b>Doraemon AI ⚠️</b></small><br>উফফ! 😓 একটু ইন্টারনেট বা সার্ভারের সমস্যা হচ্ছে। দয়া করে ২ সেকেন্ড পর আবার ট্রাই করো।</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             } finally {
                 isFetchingAI = false; 
