@@ -15,6 +15,7 @@
         #chatScreen { 
             display: none; flex-direction: column; height: 100vh; max-width: 800px; margin: 0 auto; width: 100%; 
             background-color: #000000 !important; 
+            /* 👇 তোমার দেওয়া ডার্ক থিমের ব্যাকগ্রাউন্ড ছবি */
             background-image: url('https://i.ibb.co/pLg3Tj9b/mCz5WXmP.jpg') !important;
             background-size: cover !important;
             background-position: center !important;
@@ -84,6 +85,9 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, doc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+        // 🔑 তোমার OpenRouter API Key
+        const OPENROUTER_API_KEY = "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";
 
         const app = initializeApp({ apiKey: "AIzaSyCJwqFqA_9Ebf0XpLQiiY8pV522YNOuUj0", authDomain: "chat-fb2b2.firebaseapp.com", projectId: "chat-fb2b2", storageBucket: "chat-fb2b2.firebasestorage.app", messagingSenderId: "417720476992", appId: "1:417720476992:web:974473397083942d9d86a5" });
         const db = getFirestore(app); const auth = getAuth(app); 
@@ -156,7 +160,7 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // === AI Core (OpenRouter + Bengali Prompt) ===
+        // === AI Core ===
         window.askAI = async () => {
             if (isFetchingAI) return; 
             
@@ -169,18 +173,23 @@
 
             // ১. 📸 QR Command
             if (text.toLowerCase().startsWith("qr ")) {
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(text.substring(3))}&size=200x200`;
+                const currentUrl = window.location.href;
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(currentUrl)}&size=200x200`;
                 conversationHistory.push({ role: 'user', content: text });
                 conversationHistory.push({ role: 'assistant', content: `<img src="${qrUrl}" width="100%" style="border-radius:10px;">` });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
                 return;
             }
 
-            // ২. 🎨 Image Command
+            // ২. 🎨 Image Command (Fixed: Image Not Found Issue)
             if (text.toLowerCase().startsWith("img ")) {
-                const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(text.substring(4))}?width=500&height=500&nologo=true`;
+                // র‍্যান্ডম সিড ব্যবহার করা হলো যাতে প্রতিবার নতুন ছবি আসে এবং ব্রোকেন লিংক না দেখায়
+                const randomSeed = Math.floor(Math.random() * 1000000);
+                const imgPrompt = encodeURIComponent(text.substring(4).trim());
+                const imgUrl = `https://image.pollinations.ai/prompt/${imgPrompt}?width=500&height=500&nologo=true&seed=${randomSeed}`;
+                
                 conversationHistory.push({ role: 'user', content: text });
-                conversationHistory.push({ role: 'assistant', content: `<img src="${imgUrl}" style="max-width:100%; border-radius:10px;">` });
+                conversationHistory.push({ role: 'assistant', content: `<img src="${imgUrl}" style="max-width:100%; border-radius:10px;" alt="Generated Image">` });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
                 return;
             }
@@ -220,7 +229,7 @@
                 const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                     method: "POST",
                     headers: {
-                        "Authorization": "Bearer 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",
+                        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
                         "Content-Type": "application/json",
                         "HTTP-Referer": window.location.href, 
                         "X-Title": "Pollution AI Vercel"
@@ -276,16 +285,19 @@
         };
 
         window.showQRCode = () => { 
-            const currentUrl = window.location.href;
+            let currentUrl = window.location.href;
+            if(currentUrl.includes("file://") || currentUrl.includes("onecompiler") || currentUrl === "null") currentUrl = "https://pollution-ai.vercel.app";
             document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(currentUrl)}&size=200x200`; 
             document.getElementById('qrModal').style.display = 'flex'; 
         };
         
         window.closeQRCode = () => document.getElementById('qrModal').style.display = 'none';
         
-        // 🛠️ Link Copy (Vercel-এ কোনো সমস্যা করবে না)
         window.shareRoom = async () => { 
-            const currentUrl = window.location.href;
+            let currentUrl = window.location.href;
+            if(currentUrl.includes("file://") || currentUrl.includes("onecompiler") || currentUrl === "null") {
+                currentUrl = "https://pollution-ai.vercel.app";
+            }
             try {
                 await navigator.clipboard.writeText(currentUrl);
                 alert("লিংক কপি হয়েছে!"); 
