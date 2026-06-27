@@ -392,62 +392,71 @@ if (text.toLowerCase().startsWith("search ")) {
         return;
         }
             
-// ==================== NORMAL CHAT ====================
-        isFetchingAI = true; 
-        conversationHistory.push({ role: 'user', content: text });
-        renderChats(); 
-        
-        try { 
-            await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); 
-        } catch(e){}
+           // Normal Chat
+            isFetchingAI = true; 
+            conversationHistory.push({ role: 'user', content: text });
+            renderChats(); 
 
-        const chatBox = document.getElementById('chatBox');
-        chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7; color:#0096FF;"><b>Pollution AI ⚡</b></small><br>ভাবছে... ⏳</div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7; color:#0096FF;"><b>Pollution AI ⚡</b></small><br>ভাবছে... ⏳</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
 
-        try {
-            const formattedMessages = [
-                { role: 'system', content: 'You are Pollution AI, a friendly and helpful assistant. You MUST always reply in Bengali language (বাংলা). Your creator is Mitali.' }
-            ];
-            
-            conversationHistory.forEach(msg => {
-                formattedMessages.push({
-                    role: msg.role === 'user' ? 'user' : 'assistant',
-                    content: String(msg.content).replace(/<[^>]*>?/gm, '') 
+            try {
+                const response = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        messages: [
+                            { role: 'system', content: 'You are Pollution AI. Always reply in Bengali.' },
+                            { role: 'user', content: text }
+                        ]
+                    })
                 });
-            });
 
-            const response = await fetch("/api/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ messages: formattedMessages })
-            });
+                const data = await response.json();
+                if (!response.ok) throw new Error("API Error");
 
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "API Error");
-
-            if (data?.choices?.[0]?.message?.content) {
                 const reply = data.choices[0].message.content;
                 conversationHistory.push({ role: 'assistant', content: reply });
                 renderChats(); 
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
                 speakAI(reply);
-            } else {
-                throw new Error("No reply");
+            } catch (e) {
+                console.error(e);
+                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7; color:red;"><b>Pollution AI ⚠️</b></small><br>সমস্যা হয়েছে। আবার চেষ্টা করুন।</div>`;
+            } finally {
+                isFetchingAI = false; 
+                const thinking = document.getElementById('thinking-bubble');
+                if (thinking) thinking.remove();
             }
-        } catch (e) {
-            console.error(e);
-            let errorMsg = e.message || "কিছু সমস্যা হয়েছে";
-            chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7; color:red;"><b>Pollution AI ⚠️</b></small><br><b>সমস্যা হয়েছে:</b> ${errorMsg}</div>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
-        } finally {
-            isFetchingAI = false; 
-            const thinking = document.getElementById('thinking-bubble');
-            if (thinking) thinking.remove();
-        }
-    };
+        };
 
-    // বাকি ফাংশনগুলো (renderChats, clearMemory, etc.) আগের মতো রাখো
-</script>
+        function renderChats() {
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML = '';
+            conversationHistory.forEach(msg => {
+                const sender = msg.role === 'user' ? 'You' : 'Pollution AI';
+                chatBox.innerHTML += `<div class="message \( {msg.role}-message"><small style="opacity:0.7;"><b> \){sender}</b></small><br>${msg.content}</div>`;
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        window.clearMemory = async () => {
+            if(confirm("সব চ্যাট মুছে ফেলতে চান?")) {
+                conversationHistory = [];
+                renderChats();
+                const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
+                await updateDoc(doc(db, collectionName, docId), { chatHistory: [] });
+            }
+        };
+
+        // Enter key support
+        document.getElementById("prompt").addEventListener("keypress", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                window.askAI();
+            }
+        });
+    </script>
 </body>
 </html>
