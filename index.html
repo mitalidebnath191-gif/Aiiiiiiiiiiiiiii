@@ -200,7 +200,7 @@
                 return;
             }
 
-// ৪. 🌐 DuckDuckGo Web Search Command
+// ৪. 🌐 Wikipedia Search Command (উন্নত ভার্সন)
 if (text.toLowerCase().startsWith("search ")) {
     isFetchingAI = true; 
     const searchQuery = text.substring(7).trim();
@@ -213,48 +213,41 @@ if (text.toLowerCase().startsWith("search ")) {
     } catch(e){}
 
     const chatBox = document.getElementById('chatBox');
-    chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7; color:#0096FF;"><b>Pollution AI 🌐</b></small><br>ইন্টারনেটে খুঁজছে... 🔍</div>`;
+    chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7; color:#0096FF;"><b>Pollution AI 📖</b></small><br>Wikipedia থেকে খুঁজছে... 🔍</div>`;
     chatBox.scrollTop = chatBox.scrollHeight;
 
     try {
-        // আরও ভালো ও স্থিতিশীল প্রক্সি + ফলব্যাক
-        const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(searchQuery)}&format=json&no_html=1&skip_disambig=1`;
+        // Wikipedia API
+        const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchQuery)}`;
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(wikiUrl)}`;
+
+        let wikiData;
         
-        let ddgData;
-        
-        // প্রথমে allorigins চেষ্টা করবো
         try {
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(ddgUrl)}`;
-            const ddgRes = await fetch(proxyUrl);
-            const ddgJson = await ddgRes.json();
-            ddgData = JSON.parse(ddgJson.contents);
+            const res = await fetch(proxyUrl);
+            const json = await res.json();
+            wikiData = JSON.parse(json.contents);
         } catch (e) {
-            // ফলব্যাক: corsproxy.io
-            console.log("allorigins failed, trying corsproxy...");
-            const fallbackProxy = `https://corsproxy.io/?${encodeURIComponent(ddgUrl)}`;
-            const ddgRes = await fetch(fallbackProxy);
-            ddgData = await ddgRes.json();
+            // ফলব্যাক প্রক্সি
+            const fallback = `https://corsproxy.io/?${encodeURIComponent(wikiUrl)}`;
+            const res = await fetch(fallback);
+            wikiData = await res.json();
         }
 
-        // ভালো করে রেজাল্ট বের করা
-        let searchResult = "";
-        if (ddgData.AbstractText) {
-            searchResult = ddgData.AbstractText;
-        } else if (ddgData.RelatedTopics && ddgData.RelatedTopics.length > 0) {
-            searchResult = ddgData.RelatedTopics[0].Text || "কোনো তথ্য পাওয়া যায়নি।";
-        } else {
-            searchResult = "এই বিষয়ে DuckDuckGo-তে স্পষ্ট তথ্য পাওয়া যায়নি।";
-        }
+        let summary = wikiData.extract || "এই বিষয়ে Wikipedia-তে তথ্য পাওয়া যায়নি।";
 
-        // AI দিয়ে বাংলায় সুন্দর করে explain করানো
+        // যদি বাংলা ভার্সন চাও তাহলে এটা ব্যবহার করতে পারো (অপশনাল)
+        // const bnWikiUrl = `https://bn.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchQuery)}`;
+
+        // AI দিয়ে সুন্দর বাংলায় উত্তর তৈরি
         const formattedMessages = [
             { 
                 role: 'system', 
-                content: 'You are Pollution AI. ব্যবহারকারীকে সুন্দর, সহজ ও সঠিক বাংলায় উত্তর দাও। DuckDuckGo এর রেজাল্ট থেকে তথ্য নিয়ে সংক্ষেপে ব্যাখ্যা করো।' 
+                content: 'You are Pollution AI. Wikipedia থেকে পাওয়া তথ্য ব্যবহার করে ব্যবহারকারীকে সহজ, সুন্দর ও সঠিক বাংলায় বিস্তারিত ব্যাখ্যা করো। উত্তর সংক্ষিপ্ত কিন্তু তথ্যপূর্ণ রাখো।' 
             },
             { 
                 role: 'user', 
-                content: `Search Query: ${searchQuery}\n\nResult: ${searchResult}` 
+                content: `Query: ${searchQuery}\n\nWikipedia Summary: ${summary}\n\nTitle: ${wikiData.title || searchQuery}` 
             }
         ];
 
@@ -269,26 +262,31 @@ if (text.toLowerCase().startsWith("search ")) {
 
         if (data?.choices?.[0]?.message?.content) {
             const reply = data.choices[0].message.content;
-            conversationHistory.push({ role: 'assistant', content: reply });
+            
+            // Wikipedia লিংক যোগ করা (অতিরিক্ত সুবিধা)
+            const finalReply = `\( {reply}\n\n📖 <a href=" \){wikiData.content_urls?.desktop?.page || '#'}" target="_blank" style="color:#0096FF;">Wikipedia-এ পুরো পড়ুন →</a>`;
+            
+            conversationHistory.push({ role: 'assistant', content: finalReply });
             renderChats(); 
+            
             try { 
                 await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); 
             } catch(e){}
+            
             speakAI(reply);
         }
 
     } catch (e) {
         console.error(e);
-        chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7; color:red;"><b>Pollution AI ⚠️</b></small><br><b>সার্চ করতে সমস্যা হয়েছে।</b><br>ইন্টারনেট সংযোগ চেক করুন অথবা পরে আবার চেষ্টা করুন।</div>`;
+        chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7; color:red;"><b>Pollution AI ⚠️</b></small><br>Wikipedia-এ এই বিষয়ে তথ্য পাওয়া যায়নি। অন্য কিছু দিয়ে চেষ্টা করুন।</div>`;
         chatBox.scrollTop = chatBox.scrollHeight;
     } finally {
         isFetchingAI = false; 
-        // thinking bubble সরানো
         const thinking = document.getElementById('thinking-bubble');
         if (thinking) thinking.remove();
     }
     return;
-        }
+}
 
             // ৫. 🚀 Normal Chat (OpenRouter AI)
             isFetchingAI = true; 
