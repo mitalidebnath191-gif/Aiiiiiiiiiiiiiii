@@ -200,62 +200,95 @@
                 return;
             }
 
-            // ৪. 🌐 DuckDuckGo Web Search Command
-            if (text.toLowerCase().startsWith("search ")) {
-                isFetchingAI = true; 
-                const searchQuery = text.substring(7).trim();
-                
-                conversationHistory.push({ role: 'user', content: text });
-                renderChats(); 
-                try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
-                
-                const chatBox = document.getElementById('chatBox');
-                chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7; color:#0096FF;"><b>Pollution AI 🌐</b></small><br>DuckDuckGo te internet search korchhe... 🔍</div>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
+// ৪. 🌐 DuckDuckGo Web Search Command
+if (text.toLowerCase().startsWith("search ")) {
+    isFetchingAI = true; 
+    const searchQuery = text.substring(7).trim();
+    
+    conversationHistory.push({ role: 'user', content: text });
+    renderChats(); 
+    
+    try { 
+        await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); 
+    } catch(e){}
 
-                try {
-                    // DuckDuckGo theke API fetch (CORS block theke bachte AllOrigins proxy use kora hoyeche)
-                    const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(searchQuery)}&format=json`;
-                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(ddgUrl)}`;
-                    
-                    const ddgRes = await fetch(proxyUrl);
-                    const ddgJson = await ddgRes.json();
-                    const ddgData = JSON.parse(ddgJson.contents);
-                    
-                    // Search result filter kora
-                    let searchResult = ddgData.AbstractText || (ddgData.RelatedTopics && ddgData.RelatedTopics[0] ? ddgData.RelatedTopics[0].Text : "Internet e kono sothik tothyo pawa jayni.");
+    const chatBox = document.getElementById('chatBox');
+    chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7; color:#0096FF;"><b>Pollution AI 🌐</b></small><br>ইন্টারনেটে খুঁজছে... 🔍</div>`;
+    chatBox.scrollTop = chatBox.scrollHeight;
 
-                    // Backend a pathiye Banglay sajhiye neya
-                    const formattedMessages = [
-                        { role: 'system', content: 'You are Pollution AI. Read the following search result from DuckDuckGo and explain it nicely in Bengali (বাংলা). If no info is found, say you could not find it.' },
-                        { role: 'user', content: `Search Query: ${searchQuery}\nResult: ${searchResult}` }
-                    ];
+    try {
+        // আরও ভালো ও স্থিতিশীল প্রক্সি + ফলব্যাক
+        const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(searchQuery)}&format=json&no_html=1&skip_disambig=1`;
+        
+        let ddgData;
+        
+        // প্রথমে allorigins চেষ্টা করবো
+        try {
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(ddgUrl)}`;
+            const ddgRes = await fetch(proxyUrl);
+            const ddgJson = await ddgRes.json();
+            ddgData = JSON.parse(ddgJson.contents);
+        } catch (e) {
+            // ফলব্যাক: corsproxy.io
+            console.log("allorigins failed, trying corsproxy...");
+            const fallbackProxy = `https://corsproxy.io/?${encodeURIComponent(ddgUrl)}`;
+            const ddgRes = await fetch(fallbackProxy);
+            ddgData = await ddgRes.json();
+        }
 
-                    const response = await fetch("/api/chat", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ messages: formattedMessages })
-                    });
+        // ভালো করে রেজাল্ট বের করা
+        let searchResult = "";
+        if (ddgData.AbstractText) {
+            searchResult = ddgData.AbstractText;
+        } else if (ddgData.RelatedTopics && ddgData.RelatedTopics.length > 0) {
+            searchResult = ddgData.RelatedTopics[0].Text || "কোনো তথ্য পাওয়া যায়নি।";
+        } else {
+            searchResult = "এই বিষয়ে DuckDuckGo-তে স্পষ্ট তথ্য পাওয়া যায়নি।";
+        }
 
-                    const data = await response.json();
-                    if (!response.ok) throw new Error(data.error || "API Error");
-
-                    if (data && data.choices && data.choices[0] && data.choices[0].message) {
-                        const reply = data.choices[0].message.content;
-                        conversationHistory.push({ role: 'assistant', content: reply });
-                        renderChats(); 
-                        try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
-                        speakAI(reply);
-                    }
-                } catch (e) {
-                    renderChats(); 
-                    chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7; color:red;"><b>Pollution AI ⚠️</b></small><br><b>Search Error:</b> Internet ba API te somossa.</div>`;
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                } finally {
-                    isFetchingAI = false; 
-                }
-                return;
+        // AI দিয়ে বাংলায় সুন্দর করে explain করানো
+        const formattedMessages = [
+            { 
+                role: 'system', 
+                content: 'You are Pollution AI. ব্যবহারকারীকে সুন্দর, সহজ ও সঠিক বাংলায় উত্তর দাও। DuckDuckGo এর রেজাল্ট থেকে তথ্য নিয়ে সংক্ষেপে ব্যাখ্যা করো।' 
+            },
+            { 
+                role: 'user', 
+                content: `Search Query: ${searchQuery}\n\nResult: ${searchResult}` 
             }
+        ];
+
+        const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: formattedMessages })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "API Error");
+
+        if (data?.choices?.[0]?.message?.content) {
+            const reply = data.choices[0].message.content;
+            conversationHistory.push({ role: 'assistant', content: reply });
+            renderChats(); 
+            try { 
+                await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); 
+            } catch(e){}
+            speakAI(reply);
+        }
+
+    } catch (e) {
+        console.error(e);
+        chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7; color:red;"><b>Pollution AI ⚠️</b></small><br><b>সার্চ করতে সমস্যা হয়েছে।</b><br>ইন্টারনেট সংযোগ চেক করুন অথবা পরে আবার চেষ্টা করুন।</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+    } finally {
+        isFetchingAI = false; 
+        // thinking bubble সরানো
+        const thinking = document.getElementById('thinking-bubble');
+        if (thinking) thinking.remove();
+    }
+    return;
+        }
 
             // ৫. 🚀 Normal Chat (OpenRouter AI)
             isFetchingAI = true; 
