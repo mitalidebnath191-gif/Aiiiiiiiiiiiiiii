@@ -3,47 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollution.ai - Vercel Pro Edition</title>
+    <title>Pollution.ai - Light Edition</title>
     <style>
-        body, html { margin: 0; padding: 0; font-family: sans-serif; background-color: #111; height: 100%; display: flex; flex-direction: column; }
+        /* ☀️ লাইট থিমের সুন্দর ব্যাকগ্রাউন্ড */
+        body, html { margin: 0; padding: 0; font-family: sans-serif; background-color: #f0f4f8; height: 100%; display: flex; flex-direction: column; }
         
-        #loginScreen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #fff; }
-        .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; width: 80%; max-width: 350px; }
+        #loginScreen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #f0f4f8; }
+        .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; width: 80%; max-width: 350px; }
         .btn-login { background-color: #0096FF; color: white; border: none; padding: 12px 20px; border-radius: 8px; width: 100%; cursor: pointer; font-weight: bold; }
         
-        /* 🚀 তোমার নিজস্ব ছবির ব্যাকগ্রাউন্ড */
+        /* 🚀 চ্যাট স্ক্রিনের লাইট ব্যাকগ্রাউন্ড */
         #chatScreen { 
             display: none; flex-direction: column; height: 100vh; max-width: 800px; margin: 0 auto; width: 100%; 
-            background-color: #000000 !important; 
-            /* 👇 তোমার দেওয়া ডার্ক থিমের ব্যাকগ্রাউন্ড ছবি */
-            background-image: url('https://i.ibb.co/pLg3Tj9b/mCz5WXmP.jpg') !important;
-            background-size: cover !important;
-            background-position: center !important;
+            background-color: #e6f2ff !important; /* হালকা নীল/সাদা রং */
+            background-image: none !important; /* ডার্ক ছবি সরিয়ে দেওয়া হয়েছে */
         }
         
-        .header { padding: 15px; background: rgba(0, 150, 255, 0.9); color: white; display: flex; justify-content: space-between; align-items: center; }
-        .header h3 { margin: 0; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); }
-        .header button { background: white; color: #0096FF; padding: 5px 10px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; margin-left: 5px;}
-        .header .clear-btn { color: red; }
+        /* 🔵 হেডারের ডিজাইন */
+        .header { padding: 15px; background: #0096FF; color: white; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10;}
+        .header h3 { margin: 0; text-shadow: none; font-size: 20px;}
+        .header button { background: white; color: #0096FF; padding: 6px 12px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; margin-left: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);}
+        .header .clear-btn { color: #d93025; }
         
         /* চ্যাট কন্টেইনার */
-        .chat-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: rgba(255,255,255,0.3); backdrop-filter: blur(2px); }
+        .chat-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: transparent; }
         
-        .message { max-width: 85%; padding: 12px 18px; border-radius: 15px; font-size: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .message { max-width: 85%; padding: 12px 18px; border-radius: 15px; font-size: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
         .user-message { background-color: #0096FF !important; color: #ffffff !important; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .ai-message { background-color: #ffffff !important; color: #000000 !important; align-self: flex-start; border-bottom-left-radius: 2px; font-weight: bold; }
+        .ai-message { background-color: #ffffff !important; color: #333333 !important; align-self: flex-start; border-bottom-left-radius: 2px; font-weight: bold; border: 1px solid #e0e0e0; }
         
-        .input-area { padding: 15px; background: rgba(0, 0, 0, 0.7); display: flex; gap: 10px; align-items: center;}
+        /* ⌨️ টাইপিং এরিয়া */
+        .input-area { padding: 15px; background: #ffffff; display: flex; gap: 10px; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.05);}
         
-        /* মাইক বাটন */
-        .mic-btn { background: transparent !important; border: none; font-size: 22px; cursor: pointer; padding: 0; margin-right: 5px; }
+        .mic-btn { background: transparent !important; border: none; font-size: 22px; cursor: pointer; padding: 0; margin-right: 5px; color: #555; }
         
-        input { flex: 1; padding: 12px; border-radius: 20px; border: none; outline: none; background: #ffffff !important; color: #000 !important; font-size: 14px; font-weight: bold; }
-        .input-area .send-btn { background: #0096FF; color: white; padding: 10px 20px; border-radius: 20px; border: none; cursor: pointer; font-weight: bold; font-size: 14px;}
+        input { flex: 1; padding: 12px 15px; border-radius: 20px; border: 1px solid #ddd; outline: none; background: #f8f9fa !important; color: #333 !important; font-size: 14px; font-weight: bold; }
+        input:focus { border-color: #0096FF; background: #ffffff !important;}
         
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 25px; border-radius: 15px; text-align: center; color: black; }
-        .modal-content button { background: #d93025; color: white; padding: 10px 20px; border: none; border-radius: 10px; margin-top: 15px; cursor: pointer;}
+        .input-area .send-btn { background: #0096FF; color: white; padding: 10px 20px; border-radius: 20px; border: none; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 2px 5px rgba(0, 150, 255, 0.3);}
+        
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(2px);}
+        .modal-content { background: white; padding: 25px; border-radius: 15px; text-align: center; color: black; box-shadow: 0 10px 25px rgba(0,0,0,0.2);}
+        .modal-content button { background: #d93025; color: white; padding: 10px 20px; border: none; border-radius: 10px; margin-top: 15px; cursor: pointer; font-weight: bold;}
     </style>
 </head>
 <body>
@@ -136,7 +137,6 @@
             }
         });
 
-        // === Voice Recognition ===
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
         if (SpeechRecognition) {
@@ -160,7 +160,6 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // === AI Core ===
         window.askAI = async () => {
             if (isFetchingAI) return; 
             
@@ -171,7 +170,6 @@
 
             const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
 
-            // ১. 📸 QR Command
             if (text.toLowerCase().startsWith("qr ")) {
                 const currentUrl = window.location.href;
                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(currentUrl)}&size=200x200`;
@@ -181,9 +179,7 @@
                 return;
             }
 
-            // ২. 🎨 Image Command (Fixed: Image Not Found Issue)
             if (text.toLowerCase().startsWith("img ")) {
-                // র‍্যান্ডম সিড ব্যবহার করা হলো যাতে প্রতিবার নতুন ছবি আসে এবং ব্রোকেন লিংক না দেখায়
                 const randomSeed = Math.floor(Math.random() * 1000000);
                 const imgPrompt = encodeURIComponent(text.substring(4).trim());
                 const imgUrl = `https://image.pollinations.ai/prompt/${imgPrompt}?width=500&height=500&nologo=true&seed=${randomSeed}`;
@@ -194,7 +190,6 @@
                 return;
             }
 
-            // ৩. 🚪 Personal Room Command
             if (text.toLowerCase().startsWith("room ")) {
                 const roomLink = window.location.origin + "/?room=" + text.substring(5).trim();
                 conversationHistory.push({ role: 'user', content: text });
@@ -203,18 +198,16 @@
                 return;
             }
 
-            // ৪. 🚀 OpenRouter AI Chat
             isFetchingAI = true; 
             conversationHistory.push({ role: 'user', content: text });
             try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
             
             renderChats(); 
             const chatBox = document.getElementById('chatBox');
-            chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7;"><b>Pollution AI ⚡</b></small><br>ভাবছে... ⏳</div>`;
+            chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7; color:#0096FF;"><b>Pollution AI ⚡</b></small><br>ভাবছে... ⏳</div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
-                // 🧠 System Prompt - Always Bengali
                 const formattedMessages = [
                     { role: 'system', content: 'You are Pollution AI, a friendly and helpful assistant. You MUST always reply in Bengali language (বাংলা). Your creator is Mitali.' }
                 ];
@@ -259,7 +252,7 @@
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(err){}
                 
                 renderChats(); 
-                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7;"><b>Pollution AI ⚠️</b></small><br><b>সমস্যা হয়েছে:</b> ${e.message}</div>`;
+                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7; color:red;"><b>Pollution AI ⚠️</b></small><br><b>সমস্যা হয়েছে:</b> ${e.message}</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             } finally {
                 isFetchingAI = false; 
@@ -285,8 +278,7 @@
         };
 
         window.showQRCode = () => { 
-            let currentUrl = window.location.href;
-            if(currentUrl.includes("file://") || currentUrl.includes("onecompiler") || currentUrl === "null") currentUrl = "https://pollution-ai.vercel.app";
+            const currentUrl = window.location.href;
             document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(currentUrl)}&size=200x200`; 
             document.getElementById('qrModal').style.display = 'flex'; 
         };
@@ -294,10 +286,7 @@
         window.closeQRCode = () => document.getElementById('qrModal').style.display = 'none';
         
         window.shareRoom = async () => { 
-            let currentUrl = window.location.href;
-            if(currentUrl.includes("file://") || currentUrl.includes("onecompiler") || currentUrl === "null") {
-                currentUrl = "https://pollution-ai.vercel.app";
-            }
+            const currentUrl = window.location.href;
             try {
                 await navigator.clipboard.writeText(currentUrl);
                 alert("লিংক কপি হয়েছে!"); 
