@@ -392,123 +392,62 @@ if (text.toLowerCase().startsWith("search ")) {
         return;
         }
             
-            // ৬. 🚀 Normal Chat (OpenRouter AI)
-            isFetchingAI = true; 
-            conversationHistory.push({ role: 'user', content: text });
-            renderChats(); 
-            try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+// ==================== NORMAL CHAT ====================
+        isFetchingAI = true; 
+        conversationHistory.push({ role: 'user', content: text });
+        renderChats(); 
+        
+        try { 
+            await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); 
+        } catch(e){}
+
+        const chatBox = document.getElementById('chatBox');
+        chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7; color:#0096FF;"><b>Pollution AI ⚡</b></small><br>ভাবছে... ⏳</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            const formattedMessages = [
+                { role: 'system', content: 'You are Pollution AI, a friendly and helpful assistant. You MUST always reply in Bengali language (বাংলা). Your creator is Mitali.' }
+            ];
             
-            const chatBox = document.getElementById('chatBox');
-            chatBox.innerHTML += `<div id="thinking-bubble" class="message ai-message"><small style="opacity:0.7; color:#0096FF;"><b>Pollution AI ⚡</b></small><br>ভাবছে... ⏳</div>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
-
-            try {
-                const formattedMessages = [
-                    { role: 'system', content: 'You are Pollution AI, a friendly and helpful assistant. You MUST always reply in Bengali language (বাংলা). Your creator is Mitali.' }
-                ];
-                
-                conversationHistory.forEach(msg => {
-                    formattedMessages.push({
-                        role: msg.role === 'user' ? 'user' : 'assistant',
-                        content: msg.content.replace(/<[^>]*>?/gm, '') 
-                    });
-                });
-
-                const response = await fetch("/api/chat", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        messages: formattedMessages
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (!response.ok) throw new Error(data.error || "API Error");
-
-                if (data && data.choices && data.choices[0] && data.choices[0].message) {
-                    const reply = data.choices[0].message.content;
-                    
-                    conversationHistory.push({ role: 'assistant', content: reply });
-                    renderChats(); 
-                    
-                    try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
-                    speakAI(reply);
-                } else {
-                    throw new Error("No Reply");
-                }
-                
-            } catch (e) {
-                renderChats(); 
-                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7; color:red;"><b>Pollution AI ⚠️</b></small><br><b>সমস্যা হয়েছে:</b> ${e.message}</div>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
-            } finally {
-                isFetchingAI = false; 
-            }
-        };
-
-        function renderChats() {
-            const chatBox = document.getElementById('chatBox');
-            chatBox.innerHTML = '';
             conversationHistory.forEach(msg => {
-                const sender = msg.role === 'user' ? 'You' : 'Pollution AI';
-                chatBox.innerHTML += `<div class="message ${msg.role}-message"><small style="opacity:0.7;"><b>${sender}</b></small><br>${msg.content}</div>`;
+                formattedMessages.push({
+                    role: msg.role === 'user' ? 'user' : 'assistant',
+                    content: String(msg.content).replace(/<[^>]*>?/gm, '') 
+                });
             });
+
+            const response = await fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ messages: formattedMessages })
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || "API Error");
+
+            if (data?.choices?.[0]?.message?.content) {
+                const reply = data.choices[0].message.content;
+                conversationHistory.push({ role: 'assistant', content: reply });
+                renderChats(); 
+                try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+                speakAI(reply);
+            } else {
+                throw new Error("No reply");
+            }
+        } catch (e) {
+            console.error(e);
+            let errorMsg = e.message || "কিছু সমস্যা হয়েছে";
+            chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7; color:red;"><b>Pollution AI ⚠️</b></small><br><b>সমস্যা হয়েছে:</b> ${errorMsg}</div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
+        } finally {
+            isFetchingAI = false; 
+            const thinking = document.getElementById('thinking-bubble');
+            if (thinking) thinking.remove();
         }
+    };
 
-        window.clearMemory = async () => {
-            if(confirm("সব চ্যাট মুছে ফেলতে চান?")) {
-                const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
-                conversationHistory = [];
-                renderChats();
-                await updateDoc(doc(db, collectionName, docId), { chatHistory: [] });
-            }
-        };
-
-        window.showQRCode = () => { 
-            const currentUrl = window.location.href;
-            document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(currentUrl)}&size=200x200`; 
-            document.getElementById('qrModal').style.display = 'flex'; 
-        };
-        
-        window.closeQRCode = () => document.getElementById('qrModal').style.display = 'none';
-        
-        window.shareRoom = async () => { 
-            let currentUrl = window.location.href;
-            if(currentUrl.includes("file://") || currentUrl.includes("onecompiler") || currentUrl === "null") {
-                currentUrl = "https://pollution-ai.vercel.app";
-            }
-            try {
-                if (navigator.clipboard && window.isSecureContext) {
-                    await navigator.clipboard.writeText(currentUrl);
-                    alert("লিংক কপি হয়েছে!"); 
-                } else {
-                    prompt("নিচের লিংকটি কপি করে বন্ধুদের দিন:", currentUrl);
-                }
-            } catch (err) {
-                prompt("নিচের লিংকটি কপি করে বন্ধুদের দিন:", currentUrl);
-            }
-        };
-        
-        window.logout = () => { auth.signOut(); location.reload(); };
-
-        document.getElementById("prompt").addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {
-                event.preventDefault(); 
-                window.askAI();
-            }
-        });
-        window.logout = () => { auth.signOut(); location.reload(); };
-
-        document.getElementById("prompt").addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {
-                event.preventDefault(); 
-                window.askAI();
-            }
-        });
-    </script>
+    // বাকি ফাংশনগুলো (renderChats, clearMemory, etc.) আগের মতো রাখো
+</script>
 </body>
 </html>
