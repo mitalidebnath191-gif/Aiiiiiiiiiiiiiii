@@ -175,16 +175,19 @@
 
             const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
 
-            // ১. 📸 QR Command
+            // ১. 📸 QR Command (Updated)
             if (text.toLowerCase().startsWith("qr ")) {
-                const currentUrl = window.location.href;
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(currentUrl)}&size=200x200`;
+                const qrText = text.substring(3).trim();
+                // যদি qr-এর পর কিছু লেখা থাকে তবে সেটা নেবে, না থাকলে অ্যাপের লিংক নেবে
+                const dataToEncode = qrText ? qrText : window.location.href;
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(dataToEncode)}&size=200x200`;
+                
                 conversationHistory.push({ role: 'user', content: text });
                 conversationHistory.push({ role: 'assistant', content: `<img src="${qrUrl}" width="100%" style="border-radius:10px;">` });
                 renderChats();
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
                 return;
-            }
+        }
 
             // ২. 🎨 Image Command
             if (text.toLowerCase().startsWith("img ")) {
