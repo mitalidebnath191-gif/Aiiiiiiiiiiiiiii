@@ -126,10 +126,15 @@
                 
                 const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
                 if(unsubscribe) unsubscribe();
+                
                 unsubscribe = onSnapshot(doc(db, collectionName, docId), (snap) => {
                     if(snap.exists()) {
-                        conversationHistory = snap.data().chatHistory || [];
-                        renderChats();
+                        const serverHistory = snap.data().chatHistory || [];
+                        // 🛡️ Safe-Save: সার্ভার থেকে কোনো মেসেজ ডিলিট হতে দেবে না
+                        if (conversationHistory.length === 0 || serverHistory.length > conversationHistory.length) {
+                            conversationHistory = serverHistory;
+                            renderChats();
+                        }
                     } else {
                         setDoc(doc(db, collectionName, docId), { chatHistory: [] });
                     }
@@ -154,10 +159,14 @@
         };
         
         function speakAI(text) {
-            const cleanText = text.replace(/[\*\#\_]/g, ""); 
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.lang = 'bn-IN';
-            window.speechSynthesis.speak(utterance);
+            try {
+                const cleanText = text.replace(/[\*\#\_]/g, ""); 
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'bn-IN';
+                window.speechSynthesis.speak(utterance);
+            } catch (err) {
+                console.log("Audio not supported");
+            }
         }
 
         window.askAI = async () => {
@@ -176,6 +185,7 @@
                 conversationHistory.push({ role: 'user', content: text });
                 conversationHistory.push({ role: 'assistant', content: `<img src="${qrUrl}" width="100%" style="border-radius:10px;">` });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+                renderChats();
                 return;
             }
 
@@ -187,6 +197,7 @@
                 conversationHistory.push({ role: 'user', content: text });
                 conversationHistory.push({ role: 'assistant', content: `<img src="${imgUrl}" style="max-width:100%; border-radius:10px;" alt="Generated Image">` });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+                renderChats();
                 return;
             }
 
@@ -195,6 +206,7 @@
                 conversationHistory.push({ role: 'user', content: text });
                 conversationHistory.push({ role: 'assistant', content: `<b>আপনার প্রাইভেট রুম রেডি!</b><br><br><a href="${roomLink}" target="_blank" style="color:#0096FF; font-weight:bold;">👉 লিংকে ক্লিক করে জয়েন করুন</a>` });
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
+                renderChats();
                 return;
             }
 
@@ -241,6 +253,8 @@
                     const reply = data.choices[0].message.content;
                     
                     conversationHistory.push({ role: 'assistant', content: reply });
+                    renderChats(); // 🛡️ সাথে সাথে স্ক্রিনে দেখাবে
+                    
                     try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
                     speakAI(reply);
                 } else {
@@ -248,15 +262,12 @@
                 }
                 
             } catch (e) {
-                conversationHistory.pop();
-                try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(err){}
-                
+                // 🛡️ Error হলেও মেসেজ গায়েব হবে না
                 renderChats(); 
-                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7; color:red;"><b>Pollution AI ⚠️</b></small><br><b>সমস্যা হয়েছে:</b> ${e.message}</div>`;
+                chatBox.innerHTML += `<div class="message ai-message"><small style="opacity:0.7; color:red;"><b>Pollution AI ⚠️</b></small><br><b>সমস্যা হয়েছে:</b> ইন্টারনেট বা সার্ভার প্রবলেম। আবার চেষ্টা করো!</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             } finally {
                 isFetchingAI = false; 
-                renderChats(); 
             }
         };
 
@@ -273,6 +284,8 @@
         window.clearMemory = async () => {
             if(confirm("সব চ্যাট মুছে ফেলতে চান?")) {
                 const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
+                conversationHistory = [];
+                renderChats();
                 await updateDoc(doc(db, collectionName, docId), { chatHistory: [] });
             }
         };
@@ -285,11 +298,19 @@
         
         window.closeQRCode = () => document.getElementById('qrModal').style.display = 'none';
         
+        // 🛡️ Link Copy Fix
         window.shareRoom = async () => { 
-            const currentUrl = window.location.href;
+            let currentUrl = window.location.href;
+            if(currentUrl.includes("file://") || currentUrl.includes("onecompiler") || currentUrl === "null") {
+                currentUrl = "https://pollution-ai.vercel.app";
+            }
             try {
-                await navigator.clipboard.writeText(currentUrl);
-                alert("লিংক কপি হয়েছে!"); 
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(currentUrl);
+                    alert("লিংক কপি হয়েছে!"); 
+                } else {
+                    prompt("নিচের লিংকটি কপি করে বন্ধুদের দিন:", currentUrl);
+                }
             } catch (err) {
                 prompt("নিচের লিংকটি কপি করে বন্ধুদের দিন:", currentUrl);
             }
