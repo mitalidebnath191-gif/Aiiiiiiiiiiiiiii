@@ -306,35 +306,91 @@ if (text.toLowerCase().startsWith("search ")) {
     }
     return;
         }
-            // ৫. 📝 Personal Note Command
-if (text.toLowerCase().startsWith("note ")) {
-    const noteText = text.substring(5).trim();
-    
-    if (!noteText) {
+// ==================== NOTE RELATED COMMANDS ====================
+
+    // ১. Create New Personal Note
+    if (text.toLowerCase().startsWith("note ")) {
+        const noteText = text.substring(5).trim();
+        
+        if (!noteText) {
+            conversationHistory.push({ role: 'user', content: text });
+            conversationHistory.push({ 
+                role: 'assistant', 
+                content: "❌ নোট লিখতে কিছু টেক্সট দিন।\nউদাহরণ: `note কাল সকালে দুধ কিনতে হবে`" 
+            });
+            renderChats();
+            return;
+        }
+
+        const noteHTML = `
+            <div style="background:#fff3cd; border-left:5px solid #ffc107; padding:12px; border-radius:8px; margin:10px 0;">
+                <small style="color:#d39e00; font-weight:bold;">📝 PERSONAL NOTE</small><br>
+                ${noteText}
+            </div>
+        `;
+
         conversationHistory.push({ role: 'user', content: text });
-        conversationHistory.push({ role: 'assistant', content: "❌ নোট লিখতে কিছু টেক্সট দিন। উদাহরণ: `note কাল সকালে দুধ কিনতে হবে`" });
+        conversationHistory.push({ role: 'assistant', content: noteHTML });
         renderChats();
+        
+        try { 
+            await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); 
+        } catch(e){}
         return;
     }
 
-    const noteHTML = `
-        <div style="background:#fff3cd; border-left:5px solid #ffc107; padding:12px; border-radius:8px; margin:8px 0;">
-            <small style="color:#d39e00; font-weight:bold;">📝 PERSONAL NOTE</small><br>
-            ${noteText}
-        </div>
-    `;
+    // ২. View All Notes
+    if (text.toLowerCase() === "notes" || text.toLowerCase() === "my notes") {
+        conversationHistory.push({ role: 'user', content: text });
 
-    conversationHistory.push({ role: 'user', content: text });
-    conversationHistory.push({ role: 'assistant', content: noteHTML });
-    
-    renderChats();
-    
-    try { 
-        await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); 
-    } catch(e){}
-    
-    return;
-}
+        const allNotes = conversationHistory.filter(msg => 
+            msg.role === 'assistant' && msg.content.includes("PERSONAL NOTE")
+        );
+
+        if (allNotes.length === 0) {
+            conversationHistory.push({ 
+                role: 'assistant', 
+                content: "📭 এখনো কোনো Personal Note নেই।\n`note তোমার নোট লিখুন` দিয়ে নতুন নোট তৈরি করুন।" 
+            });
+        } else {
+            let notesList = `<b>📋 তোমার সব Personal Notes (${allNotes.length}টা)</b><br><br>`;
+            
+            allNotes.forEach((note, index) => {
+                notesList += `${index + 1}. ${note.content}<br><br>`;
+            });
+
+            conversationHistory.push({ role: 'assistant', content: notesList });
+        }
+        
+        renderChats();
+        
+        try { 
+            await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); 
+        } catch(e){}
+        return;
+    }
+
+    // ৩. Clear / Delete All Notes
+    if (text.toLowerCase() === "clear notes" || text.toLowerCase() === "delete notes") {
+        conversationHistory.push({ role: 'user', content: text });
+        
+        // শুধু নোটগুলো মুছে ফেলা
+        conversationHistory = conversationHistory.filter(msg => {
+            return !msg.content.includes("PERSONAL NOTE");
+        });
+
+        conversationHistory.push({ 
+            role: 'assistant', 
+            content: "✅ সব Personal Notes মুছে ফেলা হয়েছে।" 
+        });
+        
+        renderChats();
+        
+        try { 
+            await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); 
+        } catch(e){}
+        return;
+                                      }
             // ৬. 🚀 Normal Chat (OpenRouter AI)
             isFetchingAI = true; 
             conversationHistory.push({ role: 'user', content: text });
