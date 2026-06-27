@@ -391,44 +391,7 @@ if (text.toLowerCase().startsWith("search ")) {
         } catch(e){}
         return;
         }
-
- // ==================== নতুন VIDEO COMMAND এখানে বসাও ====================
-    
-    // 6. Text to Video Command
-    if (text.toLowerCase().startsWith("video ")) {
-        const videoPrompt = text.substring(6).trim();
-        
-        if (!videoPrompt) {
-            conversationHistory.push({ role: 'user', content: text });
-            conversationHistory.push({ role: 'assistant', content: "❌ ভিডিও তৈরি করতে প্রম্পট দিন।\nউদাহরণ: `video a cat dancing`" });
-            renderChats();
-            return;
-        }
-
-        const encodedPrompt = encodeURIComponent(videoPrompt);
-        const seed = Math.floor(Math.random() * 999999);
-        
-        const videoUrl = `https://image.pollinations.ai/prompt/\( {encodedPrompt}?width=512&height=512&seed= \){seed}&video=true&nologo=true`;
-
-        conversationHistory.push({ role: 'user', content: text });
-        conversationHistory.push({ 
-            role: 'assistant', 
-            content: `🎥 **ভিডিও জেনারেট হচ্ছে...**<br><br>
-            <video width="100%" controls autoplay loop muted>
-                <source src="${videoUrl}" type="video/mp4">
-                Your browser does not support video.
-            </video><br>
-            <small>প্রম্পট: ${videoPrompt}</small>` 
-        });
-
-        renderChats();
-        
-        try { 
-            await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); 
-        } catch(e){}
-        return;
-        }
-                                      
+            
             // ৬. 🚀 Normal Chat (OpenRouter AI)
             isFetchingAI = true; 
             conversationHistory.push({ role: 'user', content: text });
