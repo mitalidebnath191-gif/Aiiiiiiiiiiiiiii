@@ -370,18 +370,18 @@ if (text.toLowerCase().startsWith("search ")) {
         return;
     }
 
-    // ৩. Clear / Delete All Notes
-    if (text.toLowerCase() === "clear notes" || text.toLowerCase() === "delete notes") {
+// ৩. Clear Chat (শুধু নরমাল চ্যাট মুছবে, Notes রেখে দিবে)
+    if (text.toLowerCase() === "clear" || text.toLowerCase() === "clear chat") {
         conversationHistory.push({ role: 'user', content: text });
-        
-        // শুধু নোটগুলো মুছে ফেলা
+
+        // শুধু নোট ছাড়া বাকি সব মুছে ফেলা
         conversationHistory = conversationHistory.filter(msg => {
-            return !msg.content.includes("PERSONAL NOTE");
+            return msg.content.includes("PERSONAL NOTE");
         });
 
         conversationHistory.push({ 
             role: 'assistant', 
-            content: "✅ সব Personal Notes মুছে ফেলা হয়েছে।" 
+            content: "✅ নরমাল চ্যাট ক্লিয়ার করা হয়েছে। Personal Notes এখনো আছে।" 
         });
         
         renderChats();
@@ -390,7 +390,8 @@ if (text.toLowerCase().startsWith("search ")) {
             await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); 
         } catch(e){}
         return;
-                                      }
+        }
+                                      
             // ৬. 🚀 Normal Chat (OpenRouter AI)
             isFetchingAI = true; 
             conversationHistory.push({ role: 'user', content: text });
