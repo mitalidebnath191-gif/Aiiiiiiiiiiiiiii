@@ -166,15 +166,32 @@
 
             const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
 
-            // ১. 📸 QR Command
-            if (text.toLowerCase().startsWith("qr ")) {
-                const currentUrl = window.location.href;
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(currentUrl)}&size=200x200`;
-                conversationHistory.push({ role: 'user', content: text });
-                conversationHistory.push({ role: 'assistant', content: `<img src="${qrUrl}" width="100%" style="border-radius:10px;">` });
-                renderChats();
-                try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); } catch(e){}
-                return;
+// ১. 📸 QR Code Command (উন্নত)
+if (text.toLowerCase().startsWith("qr ")) {
+    const qrText = text.substring(3).trim(); // "qr " এর পরের টেক্সট নেবে
+    
+    if (!qrText) {
+        conversationHistory.push({ role: 'user', content: text });
+        conversationHistory.push({ role: 'assistant', content: "❌ QR কোড তৈরি করতে কিছু লেখো। উদাহরণ: `qr Hello World` অথবা `qr https://example.com`" });
+        renderChats();
+        return;
+    }
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrText)}&size=400x400&margin=10`;
+    
+    conversationHistory.push({ role: 'user', content: text });
+    conversationHistory.push({ 
+        role: 'assistant', 
+        content: `✅ **QR Code তৈরি হয়েছে**<br><br><img src="${qrUrl}" width="100%" style="border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">` 
+    });
+    
+    renderChats();
+    
+    try { 
+        await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); 
+    } catch(e){}
+    
+    return;
             }
 
             // ২. 🎨 Image Command
@@ -289,7 +306,36 @@ if (text.toLowerCase().startsWith("search ")) {
     }
     return;
         }
-            // ৫. 🚀 Normal Chat (OpenRouter AI)
+            // ৫. 📝 Personal Note Command
+if (text.toLowerCase().startsWith("note ")) {
+    const noteText = text.substring(5).trim();
+    
+    if (!noteText) {
+        conversationHistory.push({ role: 'user', content: text });
+        conversationHistory.push({ role: 'assistant', content: "❌ নোট লিখতে কিছু টেক্সট দিন। উদাহরণ: `note কাল সকালে দুধ কিনতে হবে`" });
+        renderChats();
+        return;
+    }
+
+    const noteHTML = `
+        <div style="background:#fff3cd; border-left:5px solid #ffc107; padding:12px; border-radius:8px; margin:8px 0;">
+            <small style="color:#d39e00; font-weight:bold;">📝 PERSONAL NOTE</small><br>
+            ${noteText}
+        </div>
+    `;
+
+    conversationHistory.push({ role: 'user', content: text });
+    conversationHistory.push({ role: 'assistant', content: noteHTML });
+    
+    renderChats();
+    
+    try { 
+        await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory }); 
+    } catch(e){}
+    
+    return;
+}
+            // ৬. 🚀 Normal Chat (OpenRouter AI)
             isFetchingAI = true; 
             conversationHistory.push({ role: 'user', content: text });
             renderChats(); 
