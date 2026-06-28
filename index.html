@@ -64,7 +64,7 @@
         <div class="chat-container" id="chatBox"></div>
         <div class="input-area">
             <button class="mic-btn" onclick="window.startVoice()" title="ভয়েস টাইপিং">🎤</button>
-            <input type="text" id="prompt" placeholder="Message or use: qr, img, room, note, search">
+            <input type="text" id="prompt" placeholder="Message or use: qr, img, room, note, delnote, search">
             <button class="send-btn" onclick="window.askAI()">Send</button>
         </div>
     </div>
@@ -75,21 +75,21 @@
             <br>
             <button onclick="window.closeQRCode()">Close</button>
         </div>
-        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, doc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-        // 🛡️ API Key এখান থেকে রিমুভ করা হয়েছে, এখন Vercel Backend (api/chat.js) থেকে কাজ করবে!
+        // API Key রিমুভ করা হয়েছে, এখন Vercel Environment Variables এবং api/chat.js কাজ করবে
 
         const app = initializeApp({ apiKey: "AIzaSyCJwqFqA_9Ebf0XpLQiiY8pV522YNOuUj0", authDomain: "chat-fb2b2.firebaseapp.com", projectId: "chat-fb2b2", storageBucket: "chat-fb2b2.firebasestorage.app", messagingSenderId: "417720476992", appId: "1:417720476992:web:974473397083942d9d86a5" });
         const db = getFirestore(app); const auth = getAuth(app); 
 
         let currentUserEmail = "";
         let conversationHistory = [];
-        let myNotes = []; 
+        let myNotes = []; // 📝 নোট সেভ করার জন্য
         let unsubscribe = null; 
         let isFetchingAI = false; 
 
@@ -126,7 +126,7 @@
                     if(snap.exists()) {
                         const data = snap.data();
                         const serverHistory = data.chatHistory || [];
-                        myNotes = data.notes || []; 
+                        myNotes = data.notes || []; // 📝 ফায়ারবেস থেকে নোট লোড হবে
                         
                         if (conversationHistory.length === 0 || serverHistory.length > conversationHistory.length) {
                             conversationHistory = serverHistory;
@@ -174,12 +174,10 @@
 
             const docId = sharedRoomId ? sharedRoomId : currentUserEmail;
 
-            // ১. 📸 QR Command (Updated - লিংক বা লেখা দুটোরই QR হবে)
+            // ১. 📸 QR Command
             if (text.toLowerCase().startsWith("qr ")) {
-                const qrText = text.substring(3).trim();
-                const dataToEncode = qrText ? qrText : window.location.href;
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(dataToEncode)}&size=200x200`;
-                
+                const currentUrl = window.location.href;
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(currentUrl)}&size=200x200`;
                 conversationHistory.push({ role: 'user', content: text });
                 conversationHistory.push({ role: 'assistant', content: `<img src="${qrUrl}" width="100%" style="border-radius:10px;">` });
                 renderChats();
@@ -209,29 +207,57 @@
                 return;
             }
 
-            // ৪. 📝 Note Save Command
+            // ৪. 📝 Note Save Command (পাসওয়ার্ড সহ নোট সেভ করা)
             if (text.toLowerCase().startsWith("note ")) {
-                const newNote = text.substring(5).trim();
-                myNotes.push(newNote); 
+                const parts = text.substring(5).trim().split(" ");
+                if(parts.length < 2) {
+                    alert("সঠিক নিয়ম: note [আপনার_কোড] [আপনার_নোট]");
+                    return;
+                }
+                const secretCode = parts[0];
+                const newNote = parts.slice(1).join(" ");
+                
+                myNotes.push({ code: secretCode, text: newNote }); 
                 
                 conversationHistory.push({ role: 'user', content: text });
-                conversationHistory.push({ role: 'assistant', content: `📝 <b>আপনার নোট সফলভাবে সেভ করা হয়েছে:</b><br>"${newNote}"` });
+                conversationHistory.push({ role: 'assistant', content: `📝 <b>নোট সেভ হয়েছে (কোড: ${secretCode}):</b><br>"${newNote}"` });
                 renderChats();
                 
                 try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory, notes: myNotes }); } catch(e){}
                 return;
             }
 
-            // ৫. 📂 Show Notes Command
+            // ❌ 🗑️ Note Delete Command (পাসওয়ার্ড দিয়ে নোট ডিলিট করা)
+            if (text.toLowerCase().startsWith("delnote ")) {
+                const secretCode = text.substring(8).trim();
+                const initialLength = myNotes.length;
+                
+                // শুধুমাত্র ঐ কোডের নোটগুলো ডিলিট হবে
+                myNotes = myNotes.filter(n => (typeof n === 'object' && n.code !== secretCode) || typeof n === 'string');
+                
+                conversationHistory.push({ role: 'user', content: text });
+                if(myNotes.length < initialLength) {
+                    conversationHistory.push({ role: 'assistant', content: `🗑️ <b>সফলভাবে নোট ডিলিট করা হয়েছে!</b>` });
+                } else {
+                    conversationHistory.push({ role: 'assistant', content: `⚠️ <b>${secretCode}</b> কোড দিয়ে সেভ করা কোনো নোট পাওয়া যায়নি।` });
+                }
+                
+                renderChats();
+                try { await updateDoc(doc(db, collectionName, docId), { chatHistory: conversationHistory, notes: myNotes }); } catch(e){}
+                return;
+            }
+
+            // ৫. 📂 Show Notes Command (নোট বের করা)
             if (text.toLowerCase() === "notes" || text.toLowerCase() === "show notes") {
                 conversationHistory.push({ role: 'user', content: text });
                 
                 let reply = `📝 <b>আপনার সেভ করা নোটস:</b><br><br>`;
                 if (myNotes.length === 0) {
-                    reply += "আপনার কোনো নোট সেভ করা নেই। নতুন নোট রাখতে 'note আপনার লেখা' লিখে মেসেজ করুন।";
+                    reply += "আপনার কোনো নোট সেভ করা নেই।";
                 } else {
                     myNotes.forEach((note, index) => {
-                        reply += `<b>${index + 1}.</b> ${note}<br>`;
+                        let noteText = typeof note === 'object' ? note.text : note;
+                        reply += `<b>${index + 1}.</b> ${noteText}<br>`;
                     });
                 }
                 
@@ -241,7 +267,7 @@
                 return;
             }
 
-            // ৬. 🌐 DuckDuckGo Web Search Command (Secure Backend)
+            // ৬. 🌐 DuckDuckGo Web Search Command
             if (text.toLowerCase().startsWith("search ")) {
                 isFetchingAI = true; 
                 const searchQuery = text.substring(7).trim();
@@ -261,13 +287,12 @@
                     const ddgData = JSON.parse(ddgJson.contents);
                     let searchResult = ddgData.AbstractText || (ddgData.RelatedTopics && ddgData.RelatedTopics[0] ? ddgData.RelatedTopics[0].Text : "Internet-এ কোনো সঠিক তথ্য পাওয়া যায়নি।");
 
-                    // 👤 Debasish Das এর নাম দেওয়া হলো
                     const formattedMessages = [
                         { role: 'system', content: 'You are Pollution AI. Your creator is Debasish Das. Read the following search result from DuckDuckGo and explain it nicely in Bengali (বাংলা). If no info is found, say you could not find it.' },
                         { role: 'user', content: `Search Query: ${searchQuery}\nResult: ${searchResult}` }
                     ];
 
-                    // 🛡️ Vercel Backend Call (No direct API Key)
+                    // 🔗 Vercel Serverless API Call
                     const response = await fetch("/api/chat", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -294,7 +319,7 @@
                 return;
             }
 
-            // ৭. 🚀 Normal Chat (OpenRouter AI - Secure Backend)
+            // ৭. 🚀 Normal Chat (Vercel Backend API)
             isFetchingAI = true; 
             conversationHistory.push({ role: 'user', content: text });
             renderChats(); 
@@ -305,7 +330,6 @@
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
-                // 👤 Debasish Das এর নাম দেওয়া হলো
                 const formattedMessages = [
                     { role: 'system', content: 'You are Pollution AI, a friendly and helpful assistant. You MUST always reply in Bengali language (বাংলা). Your creator is Debasish Das.' }
                 ];
@@ -317,15 +341,11 @@
                     });
                 });
 
-                // 🛡️ Vercel Backend Call (No direct API Key)
+                // 🔗 Vercel Serverless API Call
                 const response = await fetch("/api/chat", {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        messages: formattedMessages
-                    })
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ messages: formattedMessages })
                 });
 
                 const data = await response.json();
@@ -353,7 +373,6 @@
             }
         };
 
-        // 🛠️ FIX: `){sender}` এররটি এখানে ঠিক করা হয়েছে (এখন ${sender} আছে)!
         function renderChats() {
             const chatBox = document.getElementById('chatBox');
             chatBox.innerHTML = '';
